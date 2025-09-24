@@ -23,11 +23,10 @@ trait SendsMessages
 
     protected function send(string $text, ?array $replyMarkup = null): void
     {
-        // Ensure text is a string
         if (is_array($text)) {
             $text = json_encode($text);
         }
-        
+
         $p = $this->process();
         $payload = [
             'chat_id' => $p->telegram_chat_id,
@@ -35,7 +34,7 @@ trait SendsMessages
             'parse_mode' => 'HTML',
             'disable_web_page_preview' => true,
         ];
-        
+
         if ($replyMarkup) {
             $payload['reply_markup'] = json_encode($replyMarkup);
         }
@@ -47,7 +46,6 @@ trait SendsMessages
                 $p->save();
             }
         } catch (\Exception $e) {
-            // Log the error or handle it as needed
             \Log::error('Telegram send message error: ' . $e->getMessage(), [
                 'payload' => $payload,
                 'error' => $e->getTraceAsString()
@@ -57,6 +55,10 @@ trait SendsMessages
 
     protected function edit(string $text, ?array $replyMarkup = null): void
     {
+        if (is_array($text)) {
+            $text = json_encode($text);
+        }
+
         $p = $this->process();
         if (!$p->tg_last_message_id) { $this->send($text, $replyMarkup); return; }
 
@@ -67,8 +69,17 @@ trait SendsMessages
             'parse_mode' => 'HTML',
             'disable_web_page_preview' => true,
         ];
-        if ($replyMarkup) $payload['reply_markup'] = $replyMarkup;
+        if ($replyMarkup) {
+            $payload['reply_markup'] = json_encode($replyMarkup);
+        }
 
-        Telegram::editMessageText($payload);
+        try {
+            Telegram::editMessageText($payload);
+        } catch (\Exception $e) {
+            \Log::error('Telegram edit message error: ' . $e->getMessage(), [
+                'payload' => $payload,
+                'error' => $e->getTraceAsString()
+            ]);
+        }
     }
 }
