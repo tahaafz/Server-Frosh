@@ -21,7 +21,7 @@ class Welcome extends State
     public function onText(string $text, array $u): void
     {
         if ($text === 'خرید vps' || str_contains($text,'خرید') || str_contains($text,'vps')) {
-            $this->parent->transitionTo('buy.choose_os'); return;
+            $this->parent->transitionTo('buy.choose_plan'); return;
         }
         if ($text === 'پشتیبانی' || str_contains($text,'support')) {
             $this->parent->transitionTo('support'); return;

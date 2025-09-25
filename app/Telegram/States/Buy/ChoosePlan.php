@@ -13,28 +13,27 @@ class ChoosePlan extends State
 
     public function onEnter(): void
     {
-        $os = $this->getData('os','—');
-        $kb = $this->inlineKeyboard([
-            [
-                ['text'=>'پلن 1GB','data'=>'plan:1gb'],
-                ['text'=>'پلن 2GB','data'=>'plan:2gb'],
-            ],
-            [
-                ['text'=>'⬅️ برگشت','data'=>'nav:back:choose_os'],
-            ],
-        ]);
-        $this->edit("💡 پلن خود را انتخاب کنید:\nOS: <code>{$os}</code>", $kb);
+        $this->send(
+            "🔹 لطفاً پلن سرور خود را انتخاب کنید:\n\n" .
+            "1. Plan 1 > RAM 1 | CPU 1 | Disk 25GB\n" .
+            "2. Plan 2 > RAM 2 | CPU 1 | Disk 25GB",
+            $this->inlineKeyboard([
+                [
+                    ['text' => 'Plan 1', 'data' => 'plan_1'],
+                    ['text' => 'Plan 2', 'data' => 'plan_2'],
+                ],
+            ])
+        );
     }
 
     public function onCallback(string $data, array $u): void
     {
-        if (str_starts_with($data,'plan:')) {
-            $this->putData('plan', substr($data,5));
-            $this->parent->transitionTo('enter_details'); return;
+        if ($data === 'plan_1') {
+            $this->putData('plan', 'g2s-shared-1-1-25');
+            $this->parent->transitionTo('choose_location');
+        } elseif ($data === 'plan_2') {
+            $this->putData('plan', 'g2s-shared-1-2-25');
+            $this->parent->transitionTo('choose_location');
         }
-        if ($data === 'nav:back:choose_os') {
-            $this->parent->transitionTo('buy.choose_os'); return;
-        }
-        $this->onEnter();
     }
 }

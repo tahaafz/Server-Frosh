@@ -6,6 +6,8 @@ use App\Telegram\Fsm\Core\State;
 use App\Telegram\Fsm\Traits\ReadsUpdate;
 use App\Telegram\Fsm\Traits\SendsMessages;
 use App\Telegram\Fsm\Traits\PersistsData;
+use App\Jobs\CreateServerJob;
+use App\DTOs\ServerDTO;
 
 class Confirm extends State
 {
@@ -13,28 +15,39 @@ class Confirm extends State
 
     public function onEnter(): void
     {
-        $txt = "🧾 خلاصه سفارش:\n"
-            . "• OS: <code>".$this->getData('os','—')."</code>\n"
-            . "• Plan: <code>".$this->getData('plan','—')."</code>\n"
-            . "• نام: <code>".$this->getData('name','—')."</code>\n"
-            . "• آدرس: <code>".$this->getData('address','—')."</code>";
+        $plan = $this->getData('plan');
+        $location = $this->getData('location');
+        $os = $this->getData('os');
 
-        $kb = $this->inlineKeyboard([
-            [ ['text'=>'✅ تأیید نهایی','data'=>'confirm:yes'] ],
-            [ ['text'=>'✏️ ویرایش مشخصات','data'=>'nav:details'], ['text'=>'⬅️ برگشت پلن','data'=>'nav:plan'] ],
-        ]);
-
-        $this->edit($txt, $kb);
+        // ارسال تایید به کاربر
+        $this->send(
+            "درخواست شما ثبت شد: Plan: $plan | Location: $location | OS: $os",
+            $this->inlineKeyboard([
+                [
+                    ['text' => 'تایید و ارسال', 'data' => 'confirm_yes'],
+                ],
+            ])
+        );
     }
 
     public function onCallback(string $data, array $u): void
     {
-        if ($data === 'confirm:yes') { $this->parent->transitionTo('submit'); return; }
-        if ($data === 'nav:details') {
-            $this->putData('_details_stage','ask_name');
-            $this->parent->transitionTo('enter_details'); return;
+        if ($data === 'confirm_yes') {
+            $user = $this->process();
+
+            // ایجاد DTO برای ارسال به Job
+            $serverDTO = new ServerDTO(
+                $user->id,
+                $this->getData('server_id'),
+                $this->getData('name'),
+                $this->getData('ip_address'),
+                'pending' // وضعیت اولیه
+            );
+
+            // ارسال Job برای ساخت سرور به صف
+            CreateServerJob::dispatch($serverDTO);
+
+            $this->send("درخواست ساخت سرور شما ثبت شد، لطفاً منتظر بمانید.");
         }
-        if ($data === 'nav:plan') { $this->parent->transitionTo('buy.choose_plan'); return; }
-        $this->onEnter();
     }
 }

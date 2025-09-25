@@ -7,33 +7,31 @@ use App\Telegram\Fsm\Traits\ReadsUpdate;
 use App\Telegram\Fsm\Traits\SendsMessages;
 use App\Telegram\Fsm\Traits\PersistsData;
 
-class ChooseOs extends State
+class ChooseOS extends State
 {
     use ReadsUpdate, SendsMessages, PersistsData;
 
     public function onEnter(): void
     {
-        $kb = $this->inlineKeyboard([
-            [
-                ['text'=>'Ubuntu 22','data'=>'os:ubuntu-22'],
-                ['text'=>'Debian 12','data'=>'os:debian-12'],
-            ],
-            [
-                ['text'=>'⬅️ برگشت','data'=>'nav:back:welcome'],
-            ],
-        ]);
-        $this->send("🚀 خرید VPS\nسیستم‌عامل را انتخاب کنید:", $kb);
+        $this->send(
+            "🚀 لطفاً سیستم‌عامل سرور خود را انتخاب کنید.",
+            $this->inlineKeyboard([
+                [
+                    ['text' => 'Ubuntu 20', 'data' => 'os_ubuntu_20'],
+                    ['text' => 'Ubuntu 22', 'data' => 'os_ubuntu_22'],
+                ],
+            ])
+        );
     }
 
     public function onCallback(string $data, array $u): void
     {
-        if (str_starts_with($data,'os:')) {
-            $this->putData('os', substr($data,3));
-            $this->parent->transitionTo('buy.choose_plan'); return;
+        if ($data === 'os_ubuntu_20') {
+            $this->putData('os', 'ubuntu-20.04-x64');
+        } elseif ($data === 'os_ubuntu_22') {
+            $this->putData('os', 'ubuntu-22.04-x64');
         }
-        if ($data === 'nav:back:welcome') {
-            $this->parent->transitionTo('welcome'); return;
-        }
-        $this->onEnter();
+
+        $this->parent->transitionTo('confirm');
     }
 }
