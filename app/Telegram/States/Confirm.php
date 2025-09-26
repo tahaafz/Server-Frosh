@@ -6,48 +6,69 @@ use App\Telegram\Fsm\Core\State;
 use App\Telegram\Fsm\Traits\ReadsUpdate;
 use App\Telegram\Fsm\Traits\SendsMessages;
 use App\Telegram\Fsm\Traits\PersistsData;
+use App\DTOs\ServerCreateDTO;
 use App\Jobs\CreateServerJob;
-use App\DTOs\ServerDTO;
+use Illuminate\Support\Str;
+use App\Telegram\Fsm\Traits\FlowToken;
+use App\Telegram\Fsm\Traits\MainMenuShortcuts;
 
 class Confirm extends State
 {
-    use ReadsUpdate, SendsMessages, PersistsData;
+    use ReadsUpdate, SendsMessages, PersistsData, MainMenuShortcuts, FlowToken;
 
     public function onEnter(): void
     {
-        $plan = $this->getData('plan');
-        $location = $this->getData('location');
-        $os = $this->getData('os');
+        $txt = "🧾 خلاصه سفارش:\n"
+            . "• Provider: <code>".strtoupper($this->getData('provider','gcore'))."</code>\n"
+            . "• Plan: <code>".$this->getData('plan','—')."</code>\n"
+            . "• Region: <code>".$this->getData('region_id','—')."</code>\n"
+            . "• OS: <code>".$this->getData('os_image_id','—')."</code>";
 
-        // ارسال تایید به کاربر
-        $this->send(
-            "درخواست شما ثبت شد: Plan: $plan | Location: $location | OS: $os",
-            $this->inlineKeyboard([
-                [
-                    ['text' => 'تایید و ارسال', 'data' => 'confirm_yes'],
-                ],
-            ])
-        );
+        $kb = $this->inlineKeyboard([
+            [ ['text'=>'✅ تایید و ارسال','data'=>$this->pack('confirm:yes')] ],
+            [ ['text'=>'⬅️ برگشت','data'=>$this->pack('back:os')] ],
+        ]);
+        $this->edit($txt, $kb);
     }
 
     public function onCallback(string $data, array $u): void
     {
-        if ($data === 'confirm_yes') {
+        [$ok,$rest] = $this->validateCallback($data,$u);
+        if (!$ok) return;
+
+        if ($rest === 'confirm:yes') {
             $user = $this->process();
 
-            // ایجاد DTO برای ارسال به Job
-            $serverDTO = new ServerDTO(
-                $user->id,
-                $this->getData('server_id'),
-                $this->getData('name'),
-                $this->getData('ip_address'),
-                'pending' // وضعیت اولیه
+            // ساخت نام و پسورد
+            $vmName = $user->telegram_user_id.'-'.Str::upper(Str::random(6));
+            $pass   = Str::random(14);
+
+            // ذخیره موقت برای شفافیت (اختیاری)
+            $this->putData('vm_name', $vmName);
+
+            // DTO
+            $dto = ServerCreateDTO::fromArray([
+                'user_id'     => $user->id,
+                'provider'    => $this->getData('provider','gcore'),
+                'plan'        => $this->getData('plan'),
+                'region_id'   => $this->getData('region_id'),
+                'os_image_id' => $this->getData('os_image_id'),
+                'vm_name'     => $vmName,
+                'login_user'  => 'ubuntu',
+                'login_pass'  => $pass,
+            ]);
+
+            CreateServerJob::dispatch($dto);
+
+            $this->send(
+                "✅ درخواست شما ثبت شد.\n".
+                "پس از ساخت، مشخصات اتصال برایتان ارسال می‌شود."
             );
-
-            // ارسال Job برای ساخت سرور به صف
-            CreateServerJob::dispatch($serverDTO);
-
-            $this->send("درخواست ساخت سرور شما ثبت شد، لطفاً منتظر بمانید.");
+            return;
         }
+        if ($rest === 'back:os') {
+            $this->parent->transitionTo('buy.choose_os'); return;
+        }
+        $this->onEnter();
     }
 }

@@ -15,12 +15,16 @@ abstract class State
         if (method_exists($this, 'extract')) {
             [$text, $cbData] = $this->extract($update);
         } else {
-            $text = $update['message']['text'] ?? null;
+            $text   = $update['message']['text'] ?? null;
             $cbData = $update['callback_query']['data'] ?? null;
         }
 
+        if ($text !== null && method_exists($this, 'interceptShortcuts')) {
+            if ($this->interceptShortcuts($text)) return;
+        }
+
         if ($cbData !== null && method_exists($this, 'onCallback')) { $this->onCallback($cbData, $update); return; }
-        if ($text !== null && method_exists($this, 'onText'))       { $this->onText($text, $update);       return; }
+        if ($text   !== null && method_exists($this, 'onText'))     { $this->onText($text, $update);       return; }
     }
 
     /** @return \App\Models\User */

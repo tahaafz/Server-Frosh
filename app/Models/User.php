@@ -18,4 +18,9 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'tg_data' => 'array',
     ];
+
+    public function servers()
+    {
+        return $this->hasMany(\App\Models\Server::class);
+    }
 }

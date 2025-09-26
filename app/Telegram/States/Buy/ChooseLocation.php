@@ -6,35 +6,36 @@ use App\Telegram\Fsm\Core\State;
 use App\Telegram\Fsm\Traits\ReadsUpdate;
 use App\Telegram\Fsm\Traits\SendsMessages;
 use App\Telegram\Fsm\Traits\PersistsData;
+use App\Telegram\Fsm\Traits\FlowToken;
+use App\Telegram\Fsm\Traits\MainMenuShortcuts;
 
 class ChooseLocation extends State
 {
-    use ReadsUpdate, SendsMessages, PersistsData;
+    use ReadsUpdate, SendsMessages, PersistsData, MainMenuShortcuts, FlowToken;
 
     public function onEnter(): void
     {
-        $this->send(
-            "🇦🇪 لطفاً لوکیشن سرور خود را انتخاب کنید.",
-            $this->inlineKeyboard([
-                [
-                    ['text' => 'Dubai', 'data' => 'location_dubai'],
-                    ['text' => 'London', 'data' => 'location_london'],
-                    ['text' => 'Frankfurt', 'data' => 'location_frankfurt'],
-                ],
-            ])
-        );
+        $kb = $this->inlineKeyboard([
+            [
+                ['text'=>'🇦🇪 Dubai',     'data'=>$this->pack('loc:116')],
+                ['text'=>'🇬🇧 London',    'data'=>$this->pack('loc:104')],
+                ['text'=>'🇩🇪 Frankfurt', 'data'=>$this->pack('loc:38')],
+            ],
+            [
+                ['text'=>'⬅️ برگشت','data'=>$this->pack('back:plan')],
+            ],
+        ]);
+        $this->edit("📍 لطفاً لوکیشن را انتخاب کنید:", $kb);
     }
 
     public function onCallback(string $data, array $u): void
     {
-        if ($data === 'location_dubai') {
-            $this->putData('location', '116');
-        } elseif ($data === 'location_london') {
-            $this->putData('location', '104');
-        } elseif ($data === 'location_frankfurt') {
-            $this->putData('location', '38');
-        }
+        [$ok,$rest] = $this->validateCallback($data,$u);
+        if (!$ok) return;
 
-        $this->parent->transitionTo('choose_os');
+        if (str_starts_with($rest,'loc:')) { $this->putData('region_id', substr($rest,4)); $this->parent->transitionTo('buy.choose_os'); return; }
+        if ($rest === 'back:plan')        { $this->parent->transitionTo('buy.choose_plan'); return; }
+
+        $this->onEnter();
     }
 }

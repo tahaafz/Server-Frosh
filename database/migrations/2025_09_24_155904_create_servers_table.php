@@ -4,21 +4,29 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateServersTable extends Migration
-{
+return new class extends Migration {
     public function up(): void
     {
         Schema::create('servers', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id'); // Foreign key to users table
-            $table->string('server_id'); // Server ID from API
-            $table->string('name');
-            $table->string('ip_address');
-            $table->string('status')->default('pending');
-            $table->timestamps();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
 
-            // Foreign key constraint
-            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->string('provider')->index();          // gcore
+            $table->string('external_id')->nullable();    // id از gcore
+
+            $table->string('plan');                       // g2s-shared-1-1-25
+            $table->string('region_id');                  // 116/104/38
+            $table->string('os_image_id');                // image id
+            $table->string('name');                       // vm name
+
+            $table->string('login_user')->default('ubuntu');
+            $table->string('login_pass');
+
+            $table->string('ip_address')->nullable();
+            $table->string('status')->default('pending'); // pending|active|failed
+            $table->json('raw_response')->nullable();
+
+            $table->timestamps();
         });
     }
 
@@ -26,4 +34,4 @@ class CreateServersTable extends Migration
     {
         Schema::dropIfExists('servers');
     }
-}
+};

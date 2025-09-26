@@ -7,12 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 class Server extends Model
 {
     protected $fillable = [
-        'user_id', 'server_id', 'name', 'ip_address', 'status'
+        'user_id','provider','external_id',
+        'plan','region_id','os_image_id','name',
+        'login_user','login_pass',
+        'ip_address','status','raw_response'
     ];
 
-    // ارتباط با مدل User
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
+    protected $casts = [
+        'raw_response' => 'array',
+    ];
+
+    public function user() { return $this->belongsTo(User::class); }
 }
