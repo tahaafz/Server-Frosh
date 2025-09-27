@@ -30,6 +30,17 @@ return [
     |                       Acme\Project\Commands\BotFather\ByeCommand::class,
     |             ]
     */
+    'secret' => env('TELEGRAM_BOT_SECRET', 'YOUR-BOT-SECRET'),
+    'user' => [
+        'user_id' => env('ADMIN_USER_ID', 'default'),
+        'name' => env('ADMIN_NAME', 'default'),
+        'email' => env('ADMIN_EMAIL', 'default@default.com'),
+        'password' => env('ADMIN_PASSWORD', 'default'),
+    ],
+    'channel' => [
+        'lock' => env('TELEGRAM_CHANNEL_LOCK', 'off'),
+        'link' => env('TELEGRAM_CHANNEL_LINK', 'default')
+    ],
     'bots' => [
         'mybot' => [
             'token' => env('TELEGRAM_BOT_TOKEN', 'YOUR-BOT-TOKEN'),

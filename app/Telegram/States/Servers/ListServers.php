@@ -2,9 +2,10 @@
 
 namespace App\Telegram\States\Servers;
 
-use App\Telegram\Fsm\Core\State;
-use App\Telegram\Fsm\Traits\SendsMessages;
-use App\Telegram\Fsm\Traits\ReadsUpdate;
+use App\Enums\Telegram\StateKey;
+use App\Telegram\Core\State;
+use App\Traits\Telegram\ReadsUpdate;
+use App\Traits\Telegram\SendsMessages;
 
 class ListServers extends State
 {
@@ -33,11 +34,11 @@ class ListServers extends State
     public function onCallback(string $data, array $u): void
     {
         if (str_starts_with($data, 'srv:panel:')) {
-            $this->parent->transitionTo('servers.panel');
+            $this->parent->transitionTo(StateKey::ServersPanel->value);
             return;
         }
         if ($data === 'nav:welcome') {
-            $this->parent->transitionTo('welcome'); return;
+            $this->parent->transitionTo(StateKey::Welcome->value);
         }
         $this->onEnter();
     }

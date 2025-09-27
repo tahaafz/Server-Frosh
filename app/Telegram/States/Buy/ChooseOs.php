@@ -2,12 +2,13 @@
 
 namespace App\Telegram\States\Buy;
 
-use App\Telegram\Fsm\Core\State;
-use App\Telegram\Fsm\Traits\FlowToken;
-use App\Telegram\Fsm\Traits\MainMenuShortcuts;
-use App\Telegram\Fsm\Traits\ReadsUpdate;
-use App\Telegram\Fsm\Traits\SendsMessages;
-use App\Telegram\Fsm\Traits\PersistsData;
+use App\Enums\Telegram\StateKey;
+use App\Telegram\Core\State;
+use App\Traits\Telegram\FlowToken;
+use App\Traits\Telegram\MainMenuShortcuts;
+use App\Traits\Telegram\PersistsData;
+use App\Traits\Telegram\ReadsUpdate;
+use App\Traits\Telegram\SendsMessages;
 
 class ChooseOs extends State
 {
@@ -32,9 +33,15 @@ class ChooseOs extends State
         [$ok,$rest] = $this->validateCallback($data,$u);
         if (!$ok) return;
 
-        if (str_starts_with($rest,'os:')) { $this->putData('os_image_id', substr($rest,3)); $this->parent->transitionTo('confirm'); return; }
-        if ($rest === 'back:location')    { $this->parent->transitionTo('buy.choose_location'); return; }
-
+        if (str_starts_with($rest,'os:')) {
+            $this->putData('os_image_id', substr($rest,3));
+            $this->parent->transitionTo(StateKey::Confirm->value);
+            return;
+        }
+        if ($rest === 'back:location') {
+            $this->parent->transitionTo(StateKey::BuyChooseLocation->value);
+            return;
+        }
         $this->onEnter();
     }
 }

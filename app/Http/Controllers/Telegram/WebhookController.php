@@ -2,57 +2,75 @@
 
 namespace App\Http\Controllers\Telegram;
 
-use App\Http\Controllers\Controller;
-use App\Models\User;
-use App\Telegram\Fsm\Core\Context;
-use App\Telegram\Fsm\Core\Registry;
+use App\DTOs\Telegram\TelegramUpdateDTO;
+use App\Gurds\Telegram\ChannelGate;
+use App\Gurds\Telegram\PrivateChatGate;
+use App\Gurds\Telegram\SpamGuard;
+use App\Gurds\Telegram\UpdateDeduplicator;
+use App\Services\Telegram\Admin\AdminInboxRouter;
+use App\Services\Telegram\TelegramUserService;
+use App\Services\Telegram\TopupApprovalService;
+use App\Telegram\Commands\StartCommand;
+use App\Telegram\Core\Context;
+use App\Telegram\Core\Registry;
+use App\Traits\Telegram\TgApi;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Routing\Controller;
 
 class WebhookController extends Controller
 {
-    public function __invoke(Request $request)
-    {
-        $u = $request->all();
+    use TgApi;
 
-        $chatId = data_get($u,'callback_query.message.chat.id') ?? data_get($u,'message.chat.id');
-        $tgUserId = data_get($u,'callback_query.from.id') ?? data_get($u,'message.from.id');
-        $text = data_get($u,'message.text');
-        $updateId = data_get($u,'update_id');
+    public function __invoke(
+        Request             $request,
+        ChannelGate         $gate,
+        SpamGuard           $spam,
+        UpdateDeduplicator  $dedup,
+        PrivateChatGate     $pvGate,
+        TelegramUserService $users,
+        StartCommand        $start,
+        AdminInboxRouter $adminInbox,
+    ) {
+        $dto = TelegramUpdateDTO::from($request->all());
 
-        if (!$chatId || !$tgUserId) return response('ok');
+        if (!$dto->chatId || !$dto->userId) return response('ok');
 
-        if ($updateId && !Cache::add('tg:update:'.$updateId, 1, now()->addMinutes(3))) {
+        if (!$dedup->shouldProcess($dto->updateId)) return response('ok');
+
+        if (!$pvGate->enforce($dto)) return response('ok');
+
+        $user = $users->bootOrUpdate($dto);
+
+        if ($user->is_blocked) {
+            $this->tgSend($user->telegram_chat_id,
+                "🚫 شما توسط مدیریت مسدود شده‌اید.\n".
+                ($user->blocked_reason ? "دلیل: {$user->blocked_reason}" : "")
+            );
             return response('ok');
         }
 
-        $user = User::firstOrCreate(
-            ['telegram_user_id' => $tgUserId],
-            [
-                'telegram_chat_id' => $chatId,
-                'name' => 'tg-'.$tgUserId,
-                'email' => 'tg_'.$tgUserId.'@example.com',
-                'password' => bcrypt(str()->random(16)),
-            ]
-        );
-        if ($user->telegram_chat_id !== $chatId) {
-            $user->telegram_chat_id = $chatId;
-            $user->save();
-        }
+        if (!$spam->checkOrBlock($user)) return response('ok');
 
-        $norm = $text ? mb_strtolower(trim(preg_replace('/[^\p{L}\p{N}\s]/u','',$text)),'UTF-8') : null;
-        if (!$user->tg_current_state || $norm === '/start' || $norm === 'start') {
-            $user->tg_current_state = 'welcome';
-            if ($norm === '/start') { $user->tg_data = null; $user->tg_last_message_id = null; }
-            $user->save();
-
-            (new Context($user, Registry::map()))->getState()->onEnter();
+        if ($adminInbox->maybeHandle($user, $dto)) {
             return response('ok');
         }
 
-        $ctx = new Context($user, Registry::map());
-        $ctx->getState()->handle($u);
+        if (!$user->is_admin && $gate->isChannelLockOn()) {
+            if ($dto->cbData === 'confirm:channel') {
+                if ($gate->confirmOrAlert($dto->raw, $dto->chatId, $dto->userId)) {
+                    $start->resetToWelcome($user);
+                }
+                return response('ok');
+            }
+            if (!$gate->isMember($dto->userId)) {
+                $gate->sendJoinPrompt($dto->chatId);
+                return response('ok');
+            }
+        }
 
+        if ($start->maybe($user, $dto->text)) return response('ok');
+
+        (new Context($user, Registry::map()))->getState()->handle($dto->raw);
         return response('ok');
     }
 }

@@ -2,8 +2,13 @@
 
 namespace App\Telegram\States\Buy;
 
-use App\Telegram\Fsm\Core\State;
-use App\Telegram\Fsm\Traits\{ReadsUpdate,SendsMessages,PersistsData,MainMenuShortcuts,FlowToken};
+use App\Enums\Telegram\StateKey;
+use App\Telegram\Core\State;
+use App\Traits\{Telegram\ReadsUpdate};
+use App\Traits\Telegram\FlowToken;
+use App\Traits\Telegram\MainMenuShortcuts;
+use App\Traits\Telegram\PersistsData;
+use App\Traits\Telegram\SendsMessages;
 
 class ChooseProvider extends State
 {
@@ -23,8 +28,8 @@ class ChooseProvider extends State
         [$ok,$rest] = $this->validateCallback($data,$u);
         if (!$ok) return;
 
-        if ($rest === 'prov:gcore') { $this->putData('provider','gcore'); $this->parent->transitionTo('buy.choose_plan'); return; }
-        if ($rest === 'back:welcome') { $this->parent->transitionTo('welcome'); return; }
+        if ($rest === 'prov:gcore') { $this->putData('provider','gcore'); $this->parent->transitionTo(StateKey::BuyChoosePlan->value); return; }
+        if ($rest === 'back:welcome') { $this->parent->transitionTo(StateKey::Welcome->value); return; }
 
         $this->onEnter();
     }

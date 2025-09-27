@@ -2,12 +2,12 @@
 
 namespace App\Telegram\States\Servers;
 
-use App\Models\Server;
-use App\Telegram\Fsm\Core\State;
-use App\Telegram\Fsm\Traits\SendsMessages;
-use App\Telegram\Fsm\Traits\ReadsUpdate;
-use App\Jobs\GcoreServerActionJob;
 use App\DTOs\ServerActionDTO;
+use App\Enums\Telegram\StateKey;
+use App\Jobs\Telegarm\GcoreServerActionJob;
+use App\Telegram\Core\State;
+use App\Traits\Telegram\ReadsUpdate;
+use App\Traits\Telegram\SendsMessages;
 use Illuminate\Support\Facades\Http;
 
 class ServerPanel extends State
@@ -16,7 +16,7 @@ class ServerPanel extends State
 
     public function onEnter(): void
     {
-        $this->parent->transitionTo('servers.list');
+        $this->parent->transitionTo(StateKey::ServersList->value);
     }
 
     public function onCallback(string $data, array $u): void
@@ -34,7 +34,7 @@ class ServerPanel extends State
         }
 
         if ($data === 'nav:list') {
-            $this->parent->transitionTo('servers.list'); return;
+            $this->parent->transitionTo(StateKey::ServersList->value); return;
         }
     }
 

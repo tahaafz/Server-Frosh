@@ -2,15 +2,16 @@
 
 namespace App\Telegram\States;
 
-use App\Telegram\Fsm\Core\State;
-use App\Telegram\Fsm\Traits\ReadsUpdate;
-use App\Telegram\Fsm\Traits\SendsMessages;
-use App\Telegram\Fsm\Traits\PersistsData;
 use App\DTOs\ServerCreateDTO;
-use App\Jobs\CreateServerJob;
+use App\Enums\Telegram\StateKey;
+use App\Jobs\Telegarm\CreateServerJob;
+use App\Telegram\Core\State;
+use App\Traits\Telegram\FlowToken;
+use App\Traits\Telegram\MainMenuShortcuts;
+use App\Traits\Telegram\PersistsData;
+use App\Traits\Telegram\ReadsUpdate;
+use App\Traits\Telegram\SendsMessages;
 use Illuminate\Support\Str;
-use App\Telegram\Fsm\Traits\FlowToken;
-use App\Telegram\Fsm\Traits\MainMenuShortcuts;
 
 class Confirm extends State
 {
@@ -39,14 +40,11 @@ class Confirm extends State
         if ($rest === 'confirm:yes') {
             $user = $this->process();
 
-            // ساخت نام و پسورد
             $vmName = $user->telegram_user_id.'-'.Str::upper(Str::random(6));
             $pass   = Str::random(14);
 
-            // ذخیره موقت برای شفافیت (اختیاری)
             $this->putData('vm_name', $vmName);
 
-            // DTO
             $dto = ServerCreateDTO::fromArray([
                 'user_id'     => $user->id,
                 'provider'    => $this->getData('provider','gcore'),
@@ -67,7 +65,8 @@ class Confirm extends State
             return;
         }
         if ($rest === 'back:os') {
-            $this->parent->transitionTo('buy.choose_os'); return;
+            $this->parent->transitionTo(StateKey::BuyChooseOS->value);
+            return;
         }
         $this->onEnter();
     }

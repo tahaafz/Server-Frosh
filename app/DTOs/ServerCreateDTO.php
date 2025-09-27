@@ -6,13 +6,13 @@ class ServerCreateDTO
 {
     public function __construct(
         public int    $user_id,
-        public string $provider,     // e.g. 'gcore'
-        public string $plan,         // e.g. 'g2s-shared-1-1-25'
-        public string $region_id,    // e.g. '116'
-        public string $os_image_id,  // e.g. ubuntu-22 id
-        public string $vm_name,      // e.g. 501813541-ABC123
-        public string $login_user,   // e.g. 'ubuntu'
-        public string $login_pass    // random
+        public string $provider,
+        public string $plan,
+        public string $region_id,
+        public string $os_image_id,
+        public string $vm_name,
+        public string $login_user,
+        public string $login_pass
     ) {}
 
     public static function fromArray(array $a): self

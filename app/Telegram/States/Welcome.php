@@ -2,9 +2,11 @@
 
 namespace App\Telegram\States;
 
-use App\Telegram\Fsm\Core\State;
-use App\Telegram\Fsm\Traits\ReadsUpdate;
-use App\Telegram\Fsm\Traits\SendsMessages;
+use App\Enums\Telegram\StateKey;
+use App\Telegram\Core\State;
+use App\Traits\Telegram\ReadsUpdate;
+use App\Traits\Telegram\SendsMessages;
+use APP\Support\Telegram\Text;
 
 class Welcome extends State
 {
@@ -14,21 +16,17 @@ class Welcome extends State
     {
         $this->send(
             "به ربات خوش آمدید 👋\nلطفاً یکی از گزینه‌ها را انتخاب کنید:",
-            $this->replyKeyboard([ ['خرید VPS', 'پشتیبانی', 'مدیریت سرورها'] ])
+            $this->replyKeyboard([ ['خرید VPS', 'پشتیبانی', 'مدیریت سرورها'], ['افزایش موجودی'] ])
         );
     }
 
     public function onText(string $text, array $u): void
     {
-        if ($text === 'خرید vps' || str_contains($text,'خرید') || str_contains($text,'vps')) {
-            $this->parent->transitionTo('buy.choose_provider'); return;
-        }
-        if ($text === 'پشتیبانی' || str_contains($text,'support')) {
-            $this->parent->transitionTo('support'); return;
-        }
-        if (str_contains($text,'مدیریت')) {
-            $this->parent->transitionTo('servers.list'); return;
-        }
+        $t = Text::normalize($text);
+        if (str_contains($t,'خرید'))     { $this->parent->transitionTo(StateKey::BuyChoosePlan->value); return; }
+        if (str_contains($t,'پشتیبانی')) { $this->parent->transitionTo(StateKey::Support->value);      return; }
+        if (str_contains($t,'مدیریت'))   { $this->parent->transitionTo(StateKey::ServersList->value);  return; }
+        if (str_contains($t,'افزایش موجودی'))   { $this->parent->transitionTo(StateKey::WalletEnterAmount->value);  return; }
         $this->onEnter();
     }
 }

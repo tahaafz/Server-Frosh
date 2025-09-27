@@ -15,11 +15,17 @@ return new class extends Migration {
             $table->string('tg_current_state')->nullable()->index();
             $table->json('tg_data')->nullable();
             $table->unsignedBigInteger('tg_last_message_id')->nullable();
-
             $table->string('name')->nullable();
+            $table->string('username')->nullable();
             $table->string('email')->nullable()->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password')->nullable();
+            $table->boolean('is_admin')->default(false)->index();
+            $table->boolean('is_blocked')->default(false)->index();
+            $table->string('blocked_reason')->nullable();
+            $table->unsignedInteger('message_count')->default(0);
+            $table->timestamp('last_message_at')->nullable();
+            $table->unsignedBigInteger('balance')->default(0);
             $table->rememberToken();
             $table->timestamps();
         });

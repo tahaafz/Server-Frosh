@@ -2,9 +2,10 @@
 
 namespace App\Telegram\States;
 
-use App\Telegram\Fsm\Core\State;
-use App\Telegram\Fsm\Traits\ReadsUpdate;
-use App\Telegram\Fsm\Traits\SendsMessages;
+use App\Enums\Telegram\StateKey;
+use App\Telegram\Core\State;
+use App\Traits\Telegram\ReadsUpdate;
+use App\Traits\Telegram\SendsMessages;
 
 class Support extends State
 {
@@ -18,7 +19,7 @@ class Support extends State
     public function onText(string $text, array $u): void
     {
         if (in_array($text, ['/back','back','برگشت'])) {
-            $this->parent->transitionTo('welcome'); return;
+            $this->parent->transitionTo(StateKey::Welcome->value); return;
         }
         $this->send("پیام دریافت شد ✅");
     }
