@@ -12,6 +12,7 @@ use App\Traits\Telegram\PersistsData;
 use App\Traits\Telegram\ReadsUpdate;
 use App\Traits\Telegram\SendsMessages;
 use Illuminate\Support\Str;
+use App\Telegram\UI\Buttons;
 
 class Confirm extends State
 {
@@ -19,15 +20,15 @@ class Confirm extends State
 
     public function onEnter(): void
     {
-        $txt = "🧾 خلاصه سفارش:\n"
-            . "• Provider: <code>".strtoupper($this->getData('provider','gcore'))."</code>\n"
-            . "• Plan: <code>".$this->getData('plan','—')."</code>\n"
-            . "• Region: <code>".$this->getData('region_id','—')."</code>\n"
-            . "• OS: <code>".$this->getData('os_image_id','—')."</code>";
+        $txt = __('telegram.buy.summary_title')."\n"
+            . '• Provider: <code>'.strtoupper($this->getData('provider','gcore'))."</code>\n"
+            . '• Plan: <code>'.$this->getData('plan','—')."</code>\n"
+            . '• Region: <code>'.$this->getData('region_id','—')."</code>\n"
+            . '• OS: <code>'.$this->getData('os_image_id','—')."</code>";
 
         $kb = $this->inlineKeyboard([
-            [ ['text'=>'✅ تایید و ارسال','data'=>$this->pack('confirm:yes')] ],
-            [ ['text'=>'⬅️ برگشت','data'=>$this->pack('back:os')] ],
+            [ ['text'=>Buttons::label('buy.confirm_and_send'),'data'=>$this->pack('confirm:yes')] ],
+            [ ['text'=>Buttons::label('buy.back'),'data'=>$this->pack('back:os')] ],
         ]);
         $this->edit($txt, $kb);
     }
@@ -58,10 +59,7 @@ class Confirm extends State
 
             CreateServerJob::dispatch($dto);
 
-            $this->send(
-                "✅ درخواست شما ثبت شد.\n".
-                "پس از ساخت، مشخصات اتصال برایتان ارسال می‌شود."
-            );
+            $this->send(__('telegram.buy.submitted'));
             return;
         }
         if ($rest === 'back:os') {

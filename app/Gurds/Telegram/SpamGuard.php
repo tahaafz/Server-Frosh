@@ -3,6 +3,7 @@
 namespace App\Gurds\Telegram;
 
 use App\Models\User;
+use App\Notifications\Telegram\AdminNotifier;
 use App\Traits\Telegram\TgApi;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -29,19 +30,17 @@ class SpamGuard
 
         if ($count > $threshold) {
             $user->is_blocked = true;
-            $user->blocked_reason = 'اسپم در ربات';
+            $user->blocked_reason = __('telegram.spam.reason');
             $user->save();
 
             if ($user->telegram_chat_id) {
-                $this->tgSend($user->telegram_chat_id,
-                    "🚫 شما به دلیل ارسال بیش از حد پیام (اسپم) مسدود شده‌اید.\nاگر فکر می‌کنید اشتباه است، با پشتیبانی تماس بگیرید."
-                );
+                $this->tgSend($user->telegram_chat_id, __('telegram.spam.user_blocked'));
             }
 
             app(AdminNotifier::class)->notifyAll(
                 "🚫 <b>User blocked (SPAM)</b>\n".
                 "UserID: <code>{$user->id}</code> • TG: <code>{$user->telegram_user_id}</code>\n".
-                "Reason: اسپم در ربات\nCount(window {$window}s): {$count}"
+                "Reason: ".__('telegram.spam.reason')."\nCount(window {$window}s): {$count}"
             );
 
             return false;

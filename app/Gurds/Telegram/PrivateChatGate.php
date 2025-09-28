@@ -14,7 +14,7 @@ class PrivateChatGate
         if (!$dto->chatId || !$dto->userId) return false;
 
         if ((string)$dto->chatId !== (string)$dto->userId) {
-            $this->tgSend($dto->chatId, "⛔️ این بات فقط در گفت‌وگوی خصوصی کار می‌کند.");
+            $this->tgSend($dto->chatId, __('telegram.errors.private_only'));
             return false;
         }
         return true;

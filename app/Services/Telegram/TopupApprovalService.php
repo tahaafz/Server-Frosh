@@ -32,9 +32,12 @@ class TopupApprovalService
                     'method'=>$req->method, 'admin_id'=>$admin->id
                 ]);
 
-                $this->tgSend($user->telegram_chat_id,
-                    "✅ شارژ کیف پول تایید شد.\nمبلغ: <b>".number_format($req->amount)."</b> تومان\n"
-                    . "موجودی فعلی: <b>".number_format($user->balance)."</b> تومان"
+                $this->tgSend(
+                    $user->telegram_chat_id,
+                    __('telegram.wallet.topup_approved', [
+                        'amount'  => number_format($req->amount),
+                        'balance' => number_format($user->balance),
+                    ])
                 );
 
             } elseif ($action === 'reject') {
@@ -42,9 +45,7 @@ class TopupApprovalService
                 $req->admin_id = $admin->id;
                 $req->save();
 
-                $this->tgSend($user->telegram_chat_id,
-                    "❌ رسید شما تایید نشد. در صورت سوال، با پشتیبانی در ارتباط باشید."
-                );
+                $this->tgSend($user->telegram_chat_id, __('telegram.wallet.topup_rejected'));
             }
         });
     }

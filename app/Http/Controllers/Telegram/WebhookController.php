@@ -42,9 +42,10 @@ class WebhookController extends Controller
         $user = $users->bootOrUpdate($dto);
 
         if ($user->is_blocked) {
-            $this->tgSend($user->telegram_chat_id,
-                "🚫 شما توسط مدیریت مسدود شده‌اید.\n".
-                ($user->blocked_reason ? "دلیل: {$user->blocked_reason}" : "")
+            $this->tgSend(
+                $user->telegram_chat_id,
+                __('telegram.blocked.by_admin')."\n".
+                ($user->blocked_reason ? __('telegram.blocked.reason_prefix', ['reason' => $user->blocked_reason]) : '')
             );
             return response('ok');
         }

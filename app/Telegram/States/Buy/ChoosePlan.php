@@ -4,6 +4,8 @@ namespace App\Telegram\States\Buy;
 
 use App\Enums\Telegram\StateKey;
 use App\Telegram\Core\State;
+use App\Telegram\UI\KeyboardFactory as KB;
+use App\Telegram\Callback\{CallbackData, Action};
 use App\Traits\Telegram\FlowToken;
 use App\Traits\Telegram\MainMenuShortcuts;
 use App\Traits\Telegram\PersistsData;
@@ -17,31 +19,33 @@ class ChoosePlan extends State
     public function onEnter(): void
     {
         $this->flow(); // ensure
-        $kb = $this->inlineKeyboard([
-            [
-                ['text'=>'Plan 1','data'=>$this->pack('plan:g2s-shared-1-1-25')],
-                ['text'=>'Plan 2','data'=>$this->pack('plan:g2s-shared-1-2-25')],
-            ],
-            [
-                ['text'=>'⬅️ برگشت','data'=>$this->pack('back:provider')],
-            ],
-        ]);
-        $this->send("🔹 لطفاً پلن را انتخاب کنید:\n• 1GB RAM / 1 vCPU / 25GB\n• 2GB RAM / 1 vCPU / 25GB", $kb);
+        $rawKb = KB::inlineBuyPlans('g2s-shared-1-1-25', 'g2s-shared-1-2-25');
+        // pack flow token into every callback_data
+        $kb = ['inline_keyboard' => array_map(function($row) {
+            return array_map(function($btn) {
+                if (isset($btn['callback_data'])) $btn['callback_data'] = $this->pack($btn['callback_data']);
+                return $btn;
+            }, $row);
+        }, $rawKb['inline_keyboard'])];
+        $this->send(__('telegram.buy.choose_plan'), $kb);
     }
 
     public function onCallback(string $data, array $u): void
     {
         [$ok,$rest] = $this->validateCallback($data,$u);
         if (!$ok) return;
+        $parsed = CallbackData::parse($rest); if (!$parsed) return;
 
-        if (str_starts_with($rest,'plan:')) {
-            $this->putData('plan', substr($rest,5));
-            $this->parent->transitionTo(StateKey::BuyChooseLocation->value);
-            return;
-        }
-        if ($rest === 'back:provider') {
-            $this->parent->transitionTo(StateKey::BuyChooseProvider->value);
-            return;
+        switch ($parsed['action']) {
+            case Action::BuyPlan:
+                $this->putData('plan', $parsed['params']['code'] ?? null);
+                $this->parent->transitionTo(StateKey::BuyChooseLocation->value);
+                return;
+            case Action::NavBack:
+                if (($parsed['params']['to'] ?? '') === \App\Telegram\Nav\NavTarget::Provider->value) {
+                    $this->parent->transitionTo(StateKey::BuyChooseProvider->value);
+                }
+                return;
         }
         $this->onEnter();
     }

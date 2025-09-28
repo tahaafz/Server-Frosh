@@ -17,22 +17,22 @@ trait MainMenuShortcuts
         $choice = trim($text);
 
         switch ($choice) {
-            case 'خرید VPS':
+            case \App\Telegram\UI\Buttons::label('buy'):
                 $this->newFlow();
                 $this->putData('provider', $this->getData('provider', 'gcore'));
                 $this->parent->transitionTo(StateKey::BuyChoosePlan->value);
                 return true;
 
-            case 'افزایش موجودی':
+            case \App\Telegram\UI\Buttons::label('topup'):
                 $this->newFlow();
                 $this->parent->transitionTo(StateKey::WalletEnterAmount->value);
                 return true;
 
-            case 'پشتیبانی':
+            case \App\Telegram\UI\Buttons::label('support'):
                 $this->parent->transitionTo(StateKey::Support->value);
                 return true;
 
-            case 'مدیریت سرورها':
+            case \App\Telegram\UI\Buttons::label('manage'):
                 $this->parent->transitionTo(StateKey::ServersList->value);
                 return true;
 

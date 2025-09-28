@@ -8,6 +8,7 @@ use App\Jobs\Telegarm\GcoreServerActionJob;
 use App\Telegram\Core\State;
 use App\Traits\Telegram\ReadsUpdate;
 use App\Traits\Telegram\SendsMessages;
+use App\Telegram\UI\Buttons;
 use Illuminate\Support\Facades\Http;
 
 class ServerPanel extends State
@@ -42,27 +43,27 @@ class ServerPanel extends State
     {
         $user = $this->process();
         $srv = $user->servers()->whereKey($id)->first();
-        if (!$srv) { $this->send("سرور یافت نشد."); return; }
+        if (!$srv) { $this->send(__('telegram.servers.panel.not_found')); return; }
 
         $txt =
-            "🖥 نام: <code>{$srv->name}</code>\n".
-            "ارائه‌دهنده: <b>".strtoupper($srv->provider)."</b>\n".
-            "پلن: <code>{$srv->plan}</code>\n".
-            "لوکیشن: <code>{$srv->region_id}</code>\n".
-            "وضعیت: <b>{$srv->status}</b>\n".
-            "IP: ".($srv->ip_address ? "<code>{$srv->ip_address}</code>" : "—");
+            __('telegram.servers.panel.name', ['name' => $srv->name])."\n".
+            __('telegram.servers.panel.provider', ['provider' => strtoupper($srv->provider)])."\n".
+            __('telegram.servers.panel.plan', ['plan' => $srv->plan])."\n".
+            __('telegram.servers.panel.location', ['location' => $srv->region_id])."\n".
+            __('telegram.servers.panel.status', ['status' => $srv->status])."\n".
+            __('telegram.servers.panel.ip', ['ip' => ($srv->ip_address ? "<code>{$srv->ip_address}</code>" : '—')]);
 
         $kb = [
             [
-                ['text'=>'🔄 بروزرسانی', 'data'=>"srv:refresh:{$srv->id}"],
+                ['text'=>Buttons::label('servers.panel.refresh'), 'data'=>"srv:refresh:{$srv->id}"],
             ],
             [
                 ['text'=>'🔌 Power Off', 'data'=>"srv:act:{$srv->id}:stop"],
                 ['text'=>'⚡️ Power On',  'data'=>"srv:act:{$srv->id}:start"],
             ],
             [
-                ['text'=>'🗑 حذف', 'data'=>"srv:act:{$srv->id}:delete"],
-                ['text'=>'⬅️ لیست', 'data'=>"nav:list"],
+                ['text'=>Buttons::label('servers.panel.delete'), 'data'=>"srv:act:{$srv->id}:delete"],
+                ['text'=>Buttons::label('servers.panel.list'), 'data'=>"nav:list"],
             ],
         ];
 
@@ -73,7 +74,7 @@ class ServerPanel extends State
     {
         $user = $this->process();
         $srv = $user->servers()->whereKey($id)->first();
-        if (!$srv || !$srv->external_id) { $this->send("اطلاعات کافی برای بروزرسانی وجود ندارد."); return; }
+        if (!$srv || !$srv->external_id) { $this->send(__('telegram.servers.panel.not_enough_info')); return; }
 
         // خواندن وضعیت از API (سریع؛ بدون صف)
         $apiKey   = config('services.gcore.api_key');
@@ -98,7 +99,7 @@ class ServerPanel extends State
     {
         $user = $this->process();
         $srv = $user->servers()->whereKey($id)->first();
-        if (!$srv || !$srv->external_id) { $this->send("سرور قابل مدیریت نیست."); return; }
+        if (!$srv || !$srv->external_id) { $this->send(__('telegram.servers.panel.not_manageable')); return; }
 
 
         $dto = new ServerActionDTO(
@@ -108,8 +109,12 @@ class ServerPanel extends State
         );
         GcoreServerActionJob::dispatch($dto);
 
-        $human = match($action) { 'start'=>'راه‌اندازی','stop'=>'خاموش','delete'=>'حذف' };
-        $this->send("درخواست {$human} سرور ثبت شد. نتیجه اطلاع‌رسانی می‌شود.");
+        $human = match($action) {
+            'start' => __('telegram.servers.action_name.start'),
+            'stop'  => __('telegram.servers.action_name.stop'),
+            'delete'=> __('telegram.servers.action_name.delete'),
+        };
+        $this->send(__('telegram.servers.panel.action_queued', ['action' => $human]));
     }
 
     protected function extractIp(array $vm): ?string

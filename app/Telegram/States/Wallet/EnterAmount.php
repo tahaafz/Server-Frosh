@@ -13,7 +13,7 @@ class EnterAmount extends State
     public function onEnter(): void
     {
         $this->newFlow();
-        $this->send("💰 لطفاً مبلغ شارژ را به <b>تومان</b> وارد کنید (فقط عدد).");
+        $this->send(__('telegram.wallet.enter_amount'));
     }
 
     public function onText(string $text, array $u): void
@@ -22,7 +22,7 @@ class EnterAmount extends State
 
         $amount = Text::parseAmountToman($text);
         if (!$amount || $amount < 50000) {
-            $this->send("❗️ مبلغ معتبر نیست. یک عدد (حداقل ۵۰,۰۰۰ تومان) ارسال کنید.");
+            $this->send(__('telegram.wallet.invalid_amount'));
             return;
         }
         $this->putData('topup_amount', $amount);

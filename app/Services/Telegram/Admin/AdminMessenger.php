@@ -5,6 +5,7 @@ namespace App\Services\Telegram\Admin;
 use App\Models\TopupRequest;
 use App\Models\User;
 use App\Traits\Telegram\TgApi;
+use App\Telegram\UI\Buttons;
 
 class AdminMessenger
 {
@@ -12,17 +13,21 @@ class AdminMessenger
 
     public function broadcastTopupRequest(TopupRequest $req): void
     {
-        $cap = "🧾 درخواست شارژ کیف پول\n"
-            . "UserID: <code>{$req->user_id}</code> • Amount: <b>".number_format($req->amount)."</b> تومان\n"
-            . "Method: <code>{$req->method}</code> • ID: <code>{$req->id}</code>";
+        $cap = __('telegram.topup.request_title')."\n"
+            . "UserID: <code>{$req->user_id}</code> • "
+            . __('telegram.topup.line_amount', ['amount' => number_format($req->amount)])."\n"
+            . "Method: <code>{$req->method}</code> • " . __('telegram.topup.line_id', ['id' => $req->id]);
 
         $kb = [
-            'inline_keyboard' => [
+            'inline_keyboard' => [[
                 [
-                    ['text'=>'✅ تایید','callback_data'=>"topup:approve:{$req->id}"],
-                    ['text'=>'❌ رد','callback_data'=>"topup:reject:{$req->id}"],
+                    'text' => \App\Telegram\UI\Buttons::label('approve'),
+                    'callback_data' => \App\Telegram\Callback\CallbackData::build(\App\Telegram\Callback\Action::TopupApprove, ['id' => $req->id]),
+                ], [
+                    'text' => \App\Telegram\UI\Buttons::label('reject'),
+                    'callback_data' => \App\Telegram\Callback\CallbackData::build(\App\Telegram\Callback\Action::TopupReject, ['id' => $req->id]),
                 ],
-            ],
+            ]],
         ];
 
         User::query()->where('is_admin',true)->whereNotNull('telegram_chat_id')->chunkById(200, function($admins) use ($req,$cap,$kb) {
@@ -38,14 +43,15 @@ class AdminMessenger
 
     public function broadcastSupportFromUser(User $from, string $text, ?string $photoFileId = null): void
     {
-        $cap = "📩 پیام پشتیبانی از کاربر\n"
+        $cap = __('telegram.admin.support_from_user_title')."\n"
             . "User: <code>{$from->id}</code> • TG: <code>{$from->telegram_user_id}</code>\n\n"
             . $text;
 
         $kb = [
-            'inline_keyboard' => [
-                [ ['text'=>'✍️ پاسخ','callback_data'=>"admin:reply:start:{$from->id}"] ],
-            ],
+            'inline_keyboard' => [[[
+                'text' => Buttons::label('reply'),
+                'callback_data' => \App\Telegram\Callback\CallbackData::build(\App\Telegram\Callback\Action::AdminReplyStart, ['user' => $from->id]),
+            ]]],
         ];
 
         User::query()->where('is_admin',true)->whereNotNull('telegram_chat_id')->chunkById(200, function($admins) use ($cap,$kb,$photoFileId) {

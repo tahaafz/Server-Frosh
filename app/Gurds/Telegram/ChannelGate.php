@@ -3,6 +3,7 @@
 namespace App\Gurds\Telegram;
 
 use App\Traits\Telegram\TgApi;
+use App\Telegram\UI\Buttons;
 use Telegram\Bot\Laravel\Facades\Telegram;
 
 class ChannelGate
@@ -40,14 +41,11 @@ class ChannelGate
         $url  = $link ? "https://t.me/{$link}" : null;
 
         $kb = ['inline_keyboard' => array_filter([
-            $url ? [ [ 'text' => 'عضویت در کانال', 'url' => $url ] ] : null,
-            [ [ 'text' => '✅ عضو شدم، بررسی کن', 'callback_data' => 'confirm:channel' ] ],
+            $url ? [ [ 'text' => Buttons::label('channel.join'), 'url' => $url ] ] : null,
+            [ [ 'text' => Buttons::label('channel.check'), 'callback_data' => 'confirm:channel' ] ],
         ])];
 
-        $this->tgSend($chatId,
-            "برای ادامه لازم است در کانال ما عضو باشید.\nپس از عضویت، روی «عضو شدم، بررسی کن» بزنید.",
-            $kb
-        );
+        $this->tgSend($chatId, __('telegram.channel.prompt'), $kb);
     }
 
     public function confirmOrAlert(array $update, int|string $chatId, int|string $telegramUserId): bool
@@ -60,7 +58,7 @@ class ChannelGate
         }
 
         if ($cbId = data_get($update, 'callback_query.id')) {
-            $this->tgToast($cbId, 'هنوز عضو کانال نیستید.', true, 3);
+            $this->tgToast($cbId, __('telegram.channel.not_member'), true, 3);
         }
         return false;
     }

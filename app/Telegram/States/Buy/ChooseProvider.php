@@ -18,9 +18,9 @@ class ChooseProvider extends State
     {
         $kb = $this->inlineKeyboard([
             [ ['text'=>'GCore','data'=>$this->pack('prov:gcore')] ],
-            [ ['text'=>'⬅️ بازگشت','data'=>$this->pack('back:welcome')] ],
+            [ ['text'=>\App\Telegram\UI\Buttons::label('back'),'data'=>$this->pack('back:welcome')] ],
         ]);
-        $this->send("🔰 ارائه‌دهنده را انتخاب کنید:", $kb);
+        $this->send(__('telegram.buy.choose_provider'), $kb);
     }
 
     public function onCallback(string $data, array $u): void

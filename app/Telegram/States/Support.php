@@ -13,14 +13,14 @@ class Support extends State
 
     public function onEnter(): void
     {
-        $this->send("🛠 پشتیبانی — پیام‌تان را بنویسید.\nبرای بازگشت: /back");
+        $this->send(__('telegram.support.prompt'));
     }
 
     public function onText(string $text, array $u): void
     {
-        if (in_array($text, ['/back','back','برگشت'])) {
+        if (in_array($text, ['/back','back', \App\Telegram\UI\Buttons::label('back')])) {
             $this->parent->transitionTo(StateKey::Welcome->value); return;
         }
-        $this->send("پیام دریافت شد ✅");
+        $this->send(__('telegram.support.received'));
     }
 }

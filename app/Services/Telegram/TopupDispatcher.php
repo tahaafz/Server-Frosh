@@ -4,6 +4,7 @@ namespace App\Services\Telegram;
 use App\Models\TopupRequest;
 use App\Models\User;
 use App\Traits\Telegram\TgApi;
+use App\Telegram\UI\Buttons;
 
 class TopupDispatcher
 {
@@ -11,17 +12,22 @@ class TopupDispatcher
 
     public function sendToAdmins(TopupRequest $req): void
     {
-        $cap = "🧾 درخواست شارژ کیف پول\n"
+        $cap = __('telegram.topup.request_title')."\n"
             . "UserID: <code>{$req->user_id}</code>\n"
-            . "مبلغ: <b>".number_format($req->amount)."</b> تومان\n"
-            . "روش: <code>{$req->method}</code>\n"
-            . "ID: <code>{$req->id}</code>";
+            . __('telegram.topup.line_amount', ['amount' => number_format($req->amount)])."\n"
+            . __('telegram.topup.line_method', ['method' => $req->method])."\n"
+            . __('telegram.topup.line_id', ['id' => $req->id]);
 
         $kb = [
-            'inline_keyboard' => [
-                [ ['text'=>'✅ تایید', 'callback_data'=>"topup:approve:{$req->id}"],
-                    ['text'=>'❌ رد',   'callback_data'=>"topup:reject:{$req->id}"] ],
-            ]
+            'inline_keyboard' => [[
+                [
+                    'text' => Buttons::label('approve'),
+                    'callback_data' => \App\Telegram\Callback\CallbackData::build(\App\Telegram\Callback\Action::TopupApprove, ['id' => $req->id]),
+                ], [
+                    'text' => Buttons::label('reject'),
+                    'callback_data' => \App\Telegram\Callback\CallbackData::build(\App\Telegram\Callback\Action::TopupReject, ['id' => $req->id]),
+                ],
+            ]]
         ];
 
         $admins = User::query()->where('is_admin',true)->whereNotNull('telegram_chat_id')->get();

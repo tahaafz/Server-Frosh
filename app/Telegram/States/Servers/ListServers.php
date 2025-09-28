@@ -6,6 +6,7 @@ use App\Enums\Telegram\StateKey;
 use App\Telegram\Core\State;
 use App\Traits\Telegram\ReadsUpdate;
 use App\Traits\Telegram\SendsMessages;
+use App\Telegram\UI\Buttons;
 
 class ListServers extends State
 {
@@ -17,7 +18,7 @@ class ListServers extends State
         $servers = $user->servers()->latest()->take(10)->get();
 
         if ($servers->isEmpty()) {
-            $this->send("هنوز سروری ندارید. از «خرید VPS» برای ساخت سرور جدید استفاده کنید.");
+            $this->send(__('telegram.servers.list.none'));
             return;
         }
 
@@ -26,9 +27,9 @@ class ListServers extends State
             $label = "{$srv->name} • {$srv->status}".($srv->ip_address ? " • {$srv->ip_address}" : "");
             $rows[] = [ ['text' => $label, 'data' => "srv:panel:{$srv->id}"] ];
         }
-        $rows[] = [ ['text' => '⬅️ بازگشت', 'data' => 'nav:welcome'] ];
+        $rows[] = [ ['text' => Buttons::label('back'), 'data' => 'nav:welcome'] ];
 
-        $this->send("📄 لیست سرورهای شما:", ['inline_keyboard' => $rows]);
+        $this->send(__('telegram.servers.list.title'), ['inline_keyboard' => $rows]);
     }
 
     public function onCallback(string $data, array $u): void

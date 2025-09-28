@@ -14,17 +14,20 @@ class CardPayment implements PaymentMethod
         $name = config('payment.card_holder');
         $amt  = number_format($req->amount);
 
-        return "💳 اطلاعات واریز کارت به کارت:\n"
-            . "به نام: <b>{$name}</b>\n"
-            . "شماره کارت: <code>{$card}</code>\n\n"
-            . "مبلغ: <b>{$amt}</b> تومان\n\n"
-            . "لطفاً پس از واریز، <b>عکس رسید</b> را در همین گفتگو ارسال کنید.";
+        return __('telegram.payment.card.instruction_title')."\n"
+            . __('telegram.payment.card.to_name', ['name' => $name])."\n"
+            . __('telegram.payment.card.card_number', ['card' => $card])."\n\n"
+            . __('telegram.payment.card.amount_line', ['amount' => $amt])."\n\n"
+            . __('telegram.payment.card.after_payment');
     }
 
     public function keyboard(TopupRequest $req): ?array
     {
         return ['inline_keyboard' => [
-            [ [ 'text' => 'لغو', 'callback_data' => "topup:cancel:{$req->id}" ] ],
+            [[
+                'text' => \App\Telegram\UI\Buttons::label('cancel'),
+                'callback_data' => \App\Telegram\Callback\CallbackData::build(\App\Telegram\Callback\Action::TopupCancel, ['id' => $req->id])
+            ]],
         ]];
     }
 }

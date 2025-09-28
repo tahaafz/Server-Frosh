@@ -42,8 +42,9 @@ class GcoreServerActionJob implements ShouldQueue
         }
 
         if (!$r->successful()) {
-            $this->tgSend($user->telegram_chat_id,
-                "❌ اجرای عملیات روی سرور <code>{$srv->name}</code> ناموفق بود.\nلطفاً کمی بعد دوباره تلاش کنید."
+            $this->tgSend(
+                $user->telegram_chat_id,
+                __('telegram.servers.action_failed', ['name' => $srv->name])
             );
             app(AdminNotifier::class)->serverActionFailed($srv, $this->dto->action, $r->body());
             return;
@@ -58,7 +59,15 @@ class GcoreServerActionJob implements ShouldQueue
         $srv->status = $newStatus;
         $srv->save();
 
-        $human = match($this->dto->action) { 'start'=>'راه‌اندازی', 'stop'=>'خاموش', 'delete'=>'حذف' };
-        $this->tgSend($user->telegram_chat_id, "✅ درخواست «{$human}» برای سرور <code>{$srv->name}</code> ارسال شد.\nممکن است چند لحظه زمان ببرد.");
+        $human = match($this->dto->action) {
+            'start' => __('telegram.servers.action_name.start'),
+            'stop'  => __('telegram.servers.action_name.stop'),
+            'delete'=> __('telegram.servers.action_name.delete'),
+            default => $this->dto->action,
+        };
+        $this->tgSend(
+            $user->telegram_chat_id,
+            __('telegram.servers.action_requested', ['action' => $human, 'name' => $srv->name])
+        );
     }
 }

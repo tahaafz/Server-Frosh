@@ -74,7 +74,7 @@ class CreateServerJob implements ShouldQueue
             Telegram::sendMessage([
                 'chat_id' => $user->telegram_chat_id,
                 'parse_mode' => 'HTML',
-                'text' => "❌ در حال حاضر امکان ساخت سرور وجود ندارد.\nلطفاً کمی بعد دوباره تلاش کنید یا با پشتیبانی تماس بگیرید.",
+                'text' => __('telegram.servers.create_unavailable'),
             ]);
 
             app(AdminNotifier::class)->serverCreationFailed($server, $resp->body(), $payload);
@@ -141,25 +141,28 @@ class CreateServerJob implements ShouldQueue
         $provider = strtoupper($server->provider);
         $location = $this->friendlyRegion($server->region_id);
         $plan     = $this->friendlyPlan($server->plan);
-        $ipText   = $ip ? "<code>{$ip}</code>" : "— (در حال آماده‌سازی)";
+        $ipText   = $ip ? "<code>{$ip}</code>" : __('telegram.servers.ip_pending');
 
-        $this->tgSend($chatId,
-            "✅ سرور شما ساخته شد\n\n".
-            "ارائه‌دهنده: <b>{$provider}</b>\n".
-            "نام: <code>{$server->name}</code>\n".
-            "پلن: <code>{$plan}</code>\n".
-            "لوکیشن: <code>{$location}</code>\n".
-            "IP: {$ipText}\n\n".
-            "ورود:\n• Username: <code>{$server->login_user}</code>\n• Password: <code>{$server->login_pass}</code>",
+        $this->tgSend(
+            $chatId,
+            __('telegram.servers.created_message', [
+                'provider'    => $provider,
+                'name'        => $server->name,
+                'plan'        => $plan,
+                'location'    => $location,
+                'ip'          => $ipText,
+                'login_user'  => $server->login_user,
+                'login_pass'  => $server->login_pass,
+            ]),
             ['inline_keyboard' => [
-                [ ['text' => '📋 مدیریت سرور', 'callback_data' => "srv:panel:{$server->id}"] ],
+                [ ['text' => __('telegram.servers.manage_button'), 'callback_data' => "srv:panel:{$server->id}"] ],
             ]]
         );
     }
 
     protected function notifyFailure(int|string $chatId, string $body, Server $server, array $payload): void
     {
-        $this->tgSend($chatId, "❌ در حال حاضر امکان ساخت سرور وجود ندارد.\nلطفاً کمی بعد تلاش کنید یا با پشتیبانی تماس بگیرید.");
+        $this->tgSend($chatId, __('telegram.servers.create_unavailable'));
         app(\App\Services\AdminNotifier::class)->serverCreationFailed($server, $body, $payload);
     }
 

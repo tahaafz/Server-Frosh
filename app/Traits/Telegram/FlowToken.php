@@ -31,10 +31,11 @@ trait FlowToken
         return 'f:'.$this->flow().'|'.$payload;
     }
 
-    protected function invalidateUI(array $update, string $note = '⏱ این درخواست منقضی شده.'): void
+    protected function invalidateUI(array $update, ?string $note = null): void
     {
+        $note = $note ?? __('telegram.errors.request_expired');
         if ($id = data_get($update, 'callback_query.id')) {
-            $this->tgToast($id, 'این درخواست منقضی شده', false, 3);
+            $this->tgToast($id, __('telegram.errors.request_expired_short'), false, 3);
         }
         $chatId    = data_get($update, 'callback_query.message.chat.id');
         $messageId = data_get($update, 'callback_query.message.message_id');
