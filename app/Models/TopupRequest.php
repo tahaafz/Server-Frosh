@@ -13,4 +13,5 @@ class TopupRequest extends Model
 
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
     public function admin(): BelongsTo { return $this->belongsTo(User::class,'admin_id'); }
+    public function receiptMedia() { return $this->belongsTo(\App\Models\MediaFile::class, 'receipt_media_id'); }
 }

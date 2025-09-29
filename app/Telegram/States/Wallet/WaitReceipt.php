@@ -2,6 +2,7 @@
 namespace App\Telegram\States\Wallet;
 
 use App\Enums\Telegram\StateKey;
+use App\Jobs\Telegram\ArchiveTelegramPhotoJob;
 use App\Models\TopupRequest;
 use App\Payments\PaymentRegistry;
 use App\Services\Telegram\Admin\AdminMessenger;
@@ -44,6 +45,8 @@ class WaitReceipt extends State
     {
         $last   = $photos[array_key_last($photos)] ?? null;
         $fileId = $last['file_id'] ?? null;
+        $uniqId = $last['file_unique_id'] ?? null;
+
         if (!$fileId) { $this->send(__('telegram.wallet.invalid_photo')); return; }
 
         $p   = $this->process();
@@ -52,7 +55,14 @@ class WaitReceipt extends State
 
         $req->receipt_file_id = $fileId;
         $req->save();
-
+        ArchiveTelegramPhotoJob::dispatch(
+            userId: $p->id,
+            tgFileId: $fileId,
+            tgUniqueId: $uniqId,
+            purpose: 'receipt',
+            mediableType: \App\Models\TopupRequest::class,
+            mediableId: $req->id
+        );
         app(AdminMessenger::class)->broadcastTopupRequest($req);
 
         $this->send(__('telegram.wallet.received'));
@@ -62,7 +72,6 @@ class WaitReceipt extends State
 
     public function onCallback(string $data, array $u): void
     {
-        // این پیام‌ها FlowToken ندارند؛ مستقیم parse می‌کنیم
         $parsed = \App\Telegram\Callback\CallbackData::parse($data);
         if ($parsed && $parsed['action'] === \App\Telegram\Callback\Action::TopupCancel) {
             $id  = (int)($parsed['params']['id'] ?? 0);

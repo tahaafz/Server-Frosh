@@ -4,7 +4,7 @@ namespace App\Telegram\States;
 
 use App\DTOs\ServerCreateDTO;
 use App\Enums\Telegram\StateKey;
-use App\Jobs\Telegarm\CreateServerJob;
+use App\Jobs\Telegram\CreateServerJob;
 use App\Telegram\Core\State;
 use App\Traits\Telegram\FlowToken;
 use App\Traits\Telegram\MainMenuShortcuts;

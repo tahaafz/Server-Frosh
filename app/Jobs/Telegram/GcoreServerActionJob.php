@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Jobs\Telegarm;
+namespace App\Jobs\Telegram;
 
 use App\DTOs\ServerActionDTO;
 use App\Models\Server;

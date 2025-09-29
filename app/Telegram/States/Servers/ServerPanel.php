@@ -4,7 +4,7 @@ namespace App\Telegram\States\Servers;
 
 use App\DTOs\ServerActionDTO;
 use App\Enums\Telegram\StateKey;
-use App\Jobs\Telegarm\GcoreServerActionJob;
+use App\Jobs\Telegram\GcoreServerActionJob;
 use App\Telegram\Core\State;
 use App\Traits\Telegram\ReadsUpdate;
 use App\Traits\Telegram\SendsMessages;
