@@ -6,7 +6,7 @@ use App\DTOs\Telegram\TelegramUpdateDTO;
 use App\Models\User;
 use App\Services\Telegram\TopupApprovalService;
 use App\Traits\Telegram\TgApi;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Carbon;
 
 class AdminInboxRouter
 {
@@ -36,24 +36,24 @@ class AdminInboxRouter
                 }
                 if ($p['action'] === \App\Telegram\Callback\Action::AdminReplyStart) {
                     $targetUserId = (int)($p['params']['user'] ?? 0);
-                    Cache::put("admin:reply:target:{$actor->id}", $targetUserId, now()->addMinutes(10));
+                    $this->rememberReplyTarget($actor, $targetUserId);
                     $this->tgSend($actor->telegram_chat_id, __('telegram.admin.reply_prompt'));
                     return true;
                 }
             }
         }
 
-        if ($dto->text && ($target = Cache::get("admin:reply:target:{$actor->id}"))) {
+        if ($dto->text && ($target = $this->replyTarget($actor))) {
             $user = User::find($target);
             if ($user && $user->telegram_chat_id) {
                 $this->tgSend($user->telegram_chat_id, __('telegram.admin.support_reply_prefix')."\n".$dto->text);
                 $this->tgSend($actor->telegram_chat_id, __('telegram.admin.reply_sent'));
             }
-            Cache::forget("admin:reply:target:{$actor->id}");
+            $this->forgetReplyTarget($actor);
             return true;
         }
 
-        if (($photos = data_get($dto->raw,'message.photo')) && ($target = Cache::get("admin:reply:target:{$actor->id}"))) {
+        if (($photos = data_get($dto->raw,'message.photo')) && ($target = $this->replyTarget($actor))) {
             $user = User::find($target);
             $last = $photos[array_key_last($photos)] ?? null;
             $fileId = $last['file_id'] ?? null;
@@ -64,10 +64,59 @@ class AdminInboxRouter
             } else {
                 $this->tgSend($actor->telegram_chat_id, __('telegram.admin.invalid_photo'));
             }
-            Cache::forget("admin:reply:target:{$actor->id}");
+            $this->forgetReplyTarget($actor);
             return true;
         }
 
         return false;
+    }
+
+    private function rememberReplyTarget(User $actor, int $targetUserId): void
+    {
+        if ($targetUserId <= 0) {
+            return;
+        }
+
+        $data = $actor->tg_data ?? [];
+        $data['admin_reply_target'] = [
+            'user_id' => $targetUserId,
+            'expires_at' => Carbon::now()->addMinutes(10)->toIso8601String(),
+        ];
+
+        $actor->forceFill(['tg_data' => $data])->save();
+    }
+
+    private function replyTarget(User $actor): ?int
+    {
+        $data = $actor->tg_data['admin_reply_target'] ?? null;
+        if (!$data) {
+            return null;
+        }
+
+        $userId = (int)($data['user_id'] ?? 0);
+        if ($userId <= 0) {
+            $this->forgetReplyTarget($actor);
+            return null;
+        }
+
+        $expiresAt = $data['expires_at'] ?? null;
+        if ($expiresAt && Carbon::now()->greaterThan(Carbon::parse($expiresAt))) {
+            $this->forgetReplyTarget($actor);
+            return null;
+        }
+
+        return $userId;
+    }
+
+    private function forgetReplyTarget(User $actor): void
+    {
+        if (!$actor->tg_data || !array_key_exists('admin_reply_target', $actor->tg_data)) {
+            return;
+        }
+
+        $data = $actor->tg_data;
+        unset($data['admin_reply_target']);
+
+        $actor->forceFill(['tg_data' => $data])->save();
     }
 }
