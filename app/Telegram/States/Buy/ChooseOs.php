@@ -2,63 +2,47 @@
 
 namespace App\Telegram\States\Buy;
 
-use App\Enums\Telegram\StateKey;
-use App\Telegram\Core\State;
-use App\Telegram\Callback\{CallbackData, Action};
-use App\Traits\Telegram\FlowToken;
-use App\Traits\Telegram\MainMenuShortcuts;
-use App\Traits\Telegram\PersistsData;
-use App\Traits\Telegram\ReadsUpdate;
-use App\Traits\Telegram\SendsMessages;
-use App\Telegram\UI\Buttons;
-
-class ChooseOs extends State
+class ChooseOs extends \App\Telegram\Core\AbstractState
 {
-    use ReadsUpdate, SendsMessages, PersistsData, MainMenuShortcuts, FlowToken;
 
     public function onEnter(): void
     {
-        $rawKb = ['inline_keyboard' => [
+        $inlineKeyboard = [
             [
                 [
-                    'text'=>Buttons::label('os.ubuntu20', 'Ubuntu 20'),
-                    'callback_data'=> CallbackData::build(Action::BuyOS, ['id'=>'ubuntu-20.04-x64'])
+                    'text' => \App\Telegram\UI\Buttons::label('os.ubuntu20', 'Ubuntu 20'),
+                    'callback_data' => $this->cbBuild(\App\Telegram\Callback\Action::BuyOS, ['id' => 'ubuntu-20.04-x64'])
                 ],
                 [
-                    'text'=>Buttons::label('os.ubuntu22', 'Ubuntu 22'),
-                    'callback_data'=> CallbackData::build(Action::BuyOS, ['id'=>'ubuntu-22.04-x64'])
+                    'text' => \App\Telegram\UI\Buttons::label('os.ubuntu22', 'Ubuntu 22'),
+                    'callback_data' => $this->cbBuild(\App\Telegram\Callback\Action::BuyOS, ['id' => 'ubuntu-22.04-x64'])
                 ],
             ],
             [
                 [
-                    'text'=>Buttons::label('back'),
-                    'callback_data'=> CallbackData::build(Action::NavBack, ['to'=>\App\Telegram\Nav\NavTarget::Location->value])
+                    'text' => \App\Telegram\UI\Buttons::label('back'),
+                    'callback_data' => $this->cbBackTo(\App\Telegram\Nav\NavTarget::Location->value)
                 ],
             ],
-        ]];
-        $kb = ['inline_keyboard' => array_map(function($row){
-            return array_map(function($btn){
-                if (isset($btn['callback_data'])) $btn['callback_data'] = $this->pack($btn['callback_data']);
-                return $btn;
-            }, $row);
-        }, $rawKb['inline_keyboard'])];
-        $this->edit(__('telegram.buy.choose_os'), $kb);
+        ];
+        $this->editT('telegram.buy.choose_os', ['inline_keyboard' => $inlineKeyboard]);
     }
 
-    public function onCallback(string $data, array $u): void
+    public function onCallback(string $callbackData, array $update): void
     {
-        [$ok,$rest] = $this->validateCallback($data,$u);
-        if (!$ok) return;
-        $parsed = CallbackData::parse($rest); if (!$parsed) return;
+        $parsed = $this->cbParse($callbackData, $update);
+        if (!$parsed) { $this->onEnter(); return; }
 
         switch ($parsed['action']) {
-            case Action::BuyOS:
-                $this->putData('os_image_id', (string)($parsed['params']['id'] ?? ''));
-                $this->parent->transitionTo(StateKey::Confirm->value);
+            case \App\Telegram\Callback\Action::BuyOS:
+                $selectedOsId = (string)($parsed['params']['id'] ?? '');
+                $this->putData('os_image_id', $selectedOsId);
+                $this->goEnum(\App\Enums\Telegram\StateKey::Confirm);
                 return;
-            case Action::NavBack:
-                if (($parsed['params']['to'] ?? '') === \App\Telegram\Nav\NavTarget::Location->value) {
-                    $this->parent->transitionTo(StateKey::BuyChooseLocation->value);
+            case \App\Telegram\Callback\Action::NavBack:
+                $targetKey = (string)($parsed['params']['to'] ?? '');
+                if ($targetKey === \App\Telegram\Nav\NavTarget::Location->value) {
+                    $this->goEnum(\App\Enums\Telegram\StateKey::BuyChooseLocation);
                 }
                 return;
         }

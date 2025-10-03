@@ -1,19 +1,15 @@
 <?php
 namespace App\Telegram\States\Wallet;
 
-use App\Enums\Telegram\StateKey;
 use App\Support\Telegram\Text;
-use App\Telegram\Core\State;
-use App\Traits\Telegram\{ReadsUpdate,SendsMessages,PersistsData,MainMenuShortcuts,FlowToken};
 
-class EnterAmount extends State
+class EnterAmount extends \App\Telegram\Core\AbstractState
 {
-    use ReadsUpdate, SendsMessages, PersistsData, MainMenuShortcuts, FlowToken;
 
     public function onEnter(): void
     {
         $this->newFlow();
-        $this->send(__('telegram.wallet.enter_amount'));
+        $this->sendT('telegram.wallet.enter_amount');
     }
 
     public function onText(string $text, array $u): void
@@ -28,6 +24,6 @@ class EnterAmount extends State
         $this->putData('topup_amount', $amount);
         $this->putData('topup_method', 'card');
 
-        $this->parent->transitionTo(StateKey::WalletWaitReceipt->value);
+        $this->goEnum(\App\Enums\Telegram\StateKey::WalletWaitReceipt);
     }
 }

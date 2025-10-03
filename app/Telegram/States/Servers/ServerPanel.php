@@ -3,21 +3,16 @@
 namespace App\Telegram\States\Servers;
 
 use App\DTOs\ServerActionDTO;
-use App\Enums\Telegram\StateKey;
 use App\Jobs\Telegram\GcoreServerActionJob;
-use App\Telegram\Core\State;
-use App\Traits\Telegram\ReadsUpdate;
-use App\Traits\Telegram\SendsMessages;
 use App\Telegram\UI\Buttons;
 use Illuminate\Support\Facades\Http;
 
-class ServerPanel extends State
+class ServerPanel extends \App\Telegram\Core\AbstractState
 {
-    use SendsMessages, ReadsUpdate;
 
     public function onEnter(): void
     {
-        $this->parent->transitionTo(StateKey::ServersList->value);
+        $this->goEnum(\App\Enums\Telegram\StateKey::ServersList);
     }
 
     public function onCallback(string $data, array $u): void
@@ -35,7 +30,7 @@ class ServerPanel extends State
         }
 
         if ($data === 'nav:list') {
-            $this->parent->transitionTo(StateKey::ServersList->value); return;
+            $this->goEnum(\App\Enums\Telegram\StateKey::ServersList); return;
         }
     }
 

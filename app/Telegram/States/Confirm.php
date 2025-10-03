@@ -3,20 +3,12 @@
 namespace App\Telegram\States;
 
 use App\DTOs\ServerCreateDTO;
-use App\Enums\Telegram\StateKey;
 use App\Jobs\Telegram\CreateServerJob;
-use App\Telegram\Core\State;
-use App\Traits\Telegram\FlowToken;
-use App\Traits\Telegram\MainMenuShortcuts;
-use App\Traits\Telegram\PersistsData;
-use App\Traits\Telegram\ReadsUpdate;
-use App\Traits\Telegram\SendsMessages;
 use Illuminate\Support\Str;
 use App\Telegram\UI\Buttons;
 
-class Confirm extends State
+class Confirm extends \App\Telegram\Core\AbstractState
 {
-    use ReadsUpdate, SendsMessages, PersistsData, MainMenuShortcuts, FlowToken;
 
     public function onEnter(): void
     {
@@ -63,7 +55,7 @@ class Confirm extends State
             return;
         }
         if ($rest === 'back:os') {
-            $this->parent->transitionTo(StateKey::BuyChooseOS->value);
+            $this->goEnum(\\App\\Enums\\Telegram\\StateKey::BuyChooseOS);
             return;
         }
         $this->onEnter();

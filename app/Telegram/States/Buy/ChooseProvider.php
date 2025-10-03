@@ -2,17 +2,8 @@
 
 namespace App\Telegram\States\Buy;
 
-use App\Enums\Telegram\StateKey;
-use App\Telegram\Core\State;
-use App\Traits\{Telegram\ReadsUpdate};
-use App\Traits\Telegram\FlowToken;
-use App\Traits\Telegram\MainMenuShortcuts;
-use App\Traits\Telegram\PersistsData;
-use App\Traits\Telegram\SendsMessages;
-
-class ChooseProvider extends State
+class ChooseProvider extends \App\Telegram\Core\AbstractState
 {
-    use ReadsUpdate, SendsMessages, PersistsData, MainMenuShortcuts, FlowToken;
 
     public function onEnter(): void
     {
@@ -20,7 +11,7 @@ class ChooseProvider extends State
             [ ['text'=>'GCore','data'=>$this->pack('prov:gcore')] ],
             [ ['text'=>\App\Telegram\UI\Buttons::label('back'),'data'=>$this->pack('back:welcome')] ],
         ]);
-        $this->send(__('telegram.buy.choose_provider'), $kb);
+        $this->sendT('telegram.buy.choose_provider', $kb);
     }
 
     public function onCallback(string $data, array $u): void
@@ -28,8 +19,8 @@ class ChooseProvider extends State
         [$ok,$rest] = $this->validateCallback($data,$u);
         if (!$ok) return;
 
-        if ($rest === 'prov:gcore') { $this->putData('provider','gcore'); $this->parent->transitionTo(StateKey::BuyChoosePlan->value); return; }
-        if ($rest === 'back:welcome') { $this->parent->transitionTo(StateKey::Welcome->value); return; }
+        if ($rest === 'prov:gcore') { $this->putData('provider','gcore'); $this->goEnum(\App\Enums\Telegram\StateKey::BuyChoosePlan); return; }
+        if ($rest === 'back:welcome') { $this->goEnum(\App\Enums\Telegram\StateKey::Welcome); return; }
 
         $this->onEnter();
     }

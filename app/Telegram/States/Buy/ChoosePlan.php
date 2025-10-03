@@ -2,24 +2,13 @@
 
 namespace App\Telegram\States\Buy;
 
-use App\Enums\Telegram\StateKey;
-use App\Telegram\Core\State;
-use App\Telegram\UI\KeyboardFactory as KB;
-use App\Telegram\Callback\{CallbackData, Action};
-use App\Traits\Telegram\FlowToken;
-use App\Traits\Telegram\MainMenuShortcuts;
-use App\Traits\Telegram\PersistsData;
-use App\Traits\Telegram\ReadsUpdate;
-use App\Traits\Telegram\SendsMessages;
-
-class ChoosePlan extends State
+class ChoosePlan extends \App\Telegram\Core\AbstractState
 {
-    use ReadsUpdate, SendsMessages, PersistsData, MainMenuShortcuts, FlowToken;
 
     public function onEnter(): void
     {
         $this->flow(); // ensure
-        $rawKb = KB::inlineBuyPlans('g2s-shared-1-1-25', 'g2s-shared-1-2-25');
+        $rawKb = \App\Telegram\UI\KeyboardFactory::inlineBuyPlans('g2s-shared-1-1-25', 'g2s-shared-1-2-25');
         // pack flow token into every callback_data
         $kb = ['inline_keyboard' => array_map(function($row) {
             return array_map(function($btn) {
@@ -27,23 +16,22 @@ class ChoosePlan extends State
                 return $btn;
             }, $row);
         }, $rawKb['inline_keyboard'])];
-        $this->send(__('telegram.buy.choose_plan'), $kb);
+        $this->sendT('telegram.buy.choose_plan', $kb);
     }
 
-    public function onCallback(string $data, array $u): void
+    public function onCallback(string $callbackData, array $update): void
     {
-        [$ok,$rest] = $this->validateCallback($data,$u);
-        if (!$ok) return;
-        $parsed = CallbackData::parse($rest); if (!$parsed) return;
+        $parsed = $this->cbParse($callbackData, $update);
+        if (!$parsed) return;
 
         switch ($parsed['action']) {
-            case Action::BuyPlan:
+            case \App\Telegram\Callback\Action::BuyPlan:
                 $this->putData('plan', $parsed['params']['code'] ?? null);
-                $this->parent->transitionTo(StateKey::BuyChooseLocation->value);
+                $this->goEnum(\App\Enums\Telegram\StateKey::BuyChooseLocation);
                 return;
-            case Action::NavBack:
+            case \App\Telegram\Callback\Action::NavBack:
                 if (($parsed['params']['to'] ?? '') === \App\Telegram\Nav\NavTarget::Provider->value) {
-                    $this->parent->transitionTo(StateKey::BuyChooseProvider->value);
+                    $this->goEnum(\App\Enums\Telegram\StateKey::BuyChooseProvider);
                 }
                 return;
         }

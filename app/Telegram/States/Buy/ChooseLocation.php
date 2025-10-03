@@ -2,67 +2,39 @@
 
 namespace App\Telegram\States\Buy;
 
-use App\Enums\Telegram\StateKey;
-use App\Telegram\Core\State;
-use App\Telegram\Callback\{CallbackData, Action};
-use App\Traits\Telegram\FlowToken;
-use App\Traits\Telegram\MainMenuShortcuts;
-use App\Traits\Telegram\PersistsData;
-use App\Traits\Telegram\ReadsUpdate;
-use App\Traits\Telegram\SendsMessages;
-use App\Telegram\UI\Buttons;
-
-class ChooseLocation extends State
+class ChooseLocation extends \App\Telegram\Core\AbstractState
 {
-    use ReadsUpdate, SendsMessages, PersistsData, MainMenuShortcuts, FlowToken;
 
     public function onEnter(): void
     {
-        $rawKb = ['inline_keyboard' => [
+        $inlineKeyboard = [
             [
-                [
-                    'text'=>'🇦🇪 Dubai',
-                    'callback_data'=> CallbackData::build(Action::BuyLocation, ['id'=>116])
-                ],
-                [
-                    'text'=>'🇬🇧 London',
-                    'callback_data'=> CallbackData::build(Action::BuyLocation, ['id'=>104])
-                ],
-                [
-                    'text'=>'🇩🇪 Frankfurt',
-                    'callback_data'=> CallbackData::build(Action::BuyLocation, ['id'=>38])
-                ],
+                ['text' => '🇦🇪 Dubai',     'callback_data' => $this->cbBuild(\App\Telegram\Callback\Action::BuyLocation, ['id' => 116])],
+                ['text' => '🇬🇧 London',    'callback_data' => $this->cbBuild(\App\Telegram\Callback\Action::BuyLocation, ['id' => 104])],
+                ['text' => '🇩🇪 Frankfurt', 'callback_data' => $this->cbBuild(\App\Telegram\Callback\Action::BuyLocation, ['id' => 38 ])],
             ],
             [
-                [
-                    'text'=>Buttons::label('back'),
-                    'callback_data'=> CallbackData::build(Action::NavBack, ['to'=>\App\Telegram\Nav\NavTarget::Plan->value])
-                ],
+                ['text' => \App\Telegram\UI\Buttons::label('back'), 'callback_data' => $this->cbBackTo(\App\Telegram\Nav\NavTarget::Plan->value)],
             ],
-        ]];
-        $kb = ['inline_keyboard' => array_map(function($row){
-            return array_map(function($btn){
-                if (isset($btn['callback_data'])) $btn['callback_data'] = $this->pack($btn['callback_data']);
-                return $btn;
-            }, $row);
-        }, $rawKb['inline_keyboard'])];
-        $this->edit(__('telegram.buy.choose_location'), $kb);
+        ];
+        $this->editT('telegram.buy.choose_location', ['inline_keyboard' => $inlineKeyboard]);
     }
 
-    public function onCallback(string $data, array $u): void
+    public function onCallback(string $callbackData, array $update): void
     {
-        [$ok,$rest] = $this->validateCallback($data,$u);
-        if (!$ok) return;
-        $parsed = CallbackData::parse($rest); if (!$parsed) return;
+        $parsed = $this->cbParse($callbackData, $update);
+        if (!$parsed) { $this->onEnter(); return; }
 
         switch ($parsed['action']) {
-            case Action::BuyLocation:
-                $this->putData('region_id', (string)($parsed['params']['id'] ?? ''));
-                $this->parent->transitionTo(StateKey::BuyChooseOS->value);
+            case \App\Telegram\Callback\Action::BuyLocation:
+                $selectedRegionId = (string)($parsed['params']['id'] ?? '');
+                $this->putData('region_id', $selectedRegionId);
+                $this->goEnum(\App\Enums\Telegram\StateKey::BuyChooseOS);
                 return;
-            case Action::NavBack:
-                if (($parsed['params']['to'] ?? '') === \App\Telegram\Nav\NavTarget::Plan->value) {
-                    $this->parent->transitionTo(StateKey::BuyChoosePlan->value);
+            case \App\Telegram\Callback\Action::NavBack:
+                $targetKey = (string)($parsed['params']['to'] ?? '');
+                if ($targetKey === \App\Telegram\Nav\NavTarget::Plan->value) {
+                    $this->goEnum(\App\Enums\Telegram\StateKey::BuyChoosePlan);
                 }
                 return;
         }
