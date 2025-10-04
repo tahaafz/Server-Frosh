@@ -9,9 +9,9 @@ class ChooseLocation extends \App\Telegram\Core\AbstractState
     {
         $inlineKeyboard = [
             [
-                ['text' => '🇦🇪 Dubai',     'callback_data' => $this->cbBuild(\App\Telegram\Callback\Action::BuyLocation, ['id' => 116])],
-                ['text' => '🇬🇧 London',    'callback_data' => $this->cbBuild(\App\Telegram\Callback\Action::BuyLocation, ['id' => 104])],
-                ['text' => '🇩🇪 Frankfurt', 'callback_data' => $this->cbBuild(\App\Telegram\Callback\Action::BuyLocation, ['id' => 38 ])],
+                ['text' => \App\Telegram\UI\Buttons::label('locations.dubai', '🇦🇪 Dubai'),     'callback_data' => $this->cbBuild(\App\Telegram\Callback\Action::BuyLocation, ['id' => 116])],
+                ['text' => \App\Telegram\UI\Buttons::label('locations.london', '🇬🇧 London'),    'callback_data' => $this->cbBuild(\App\Telegram\Callback\Action::BuyLocation, ['id' => 104])],
+                ['text' => \App\Telegram\UI\Buttons::label('locations.frankfurt', '🇩🇪 Frankfurt'), 'callback_data' => $this->cbBuild(\App\Telegram\Callback\Action::BuyLocation, ['id' => 38 ])],
             ],
             [
                 ['text' => \App\Telegram\UI\Buttons::label('back'), 'callback_data' => $this->cbBackTo(\App\Telegram\Nav\NavTarget::Plan->value)],

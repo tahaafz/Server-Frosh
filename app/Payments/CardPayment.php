@@ -6,12 +6,21 @@ use App\Models\TopupRequest;
 
 class CardPayment implements PaymentMethod
 {
+    private string $cardNumber;
+    private string $cardHolder;
+
+    public function __construct()
+    {
+        $this->cardNumber = (string) config('payment.card_number');
+        $this->cardHolder = (string) config('payment.card_holder');
+    }
+
     public function key(): string { return 'card'; }
 
     public function instruction(TopupRequest $req): string
     {
-        $card = config('payment.card_number');
-        $name = config('payment.card_holder');
+        $card = $this->cardNumber;
+        $name = $this->cardHolder;
         $amt  = number_format($req->amount);
 
         return __('telegram.payment.card.instruction_title')."\n"

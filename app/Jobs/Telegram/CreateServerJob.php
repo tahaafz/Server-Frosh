@@ -19,10 +19,18 @@ class CreateServerJob implements ShouldQueue
     use Dispatchable, Queueable, SerializesModels, TgApi;
 
     public ServerCreateDTO $dto;
+    private string $apiKey;
+    private string $projectId;
+    private string $apiBaseV1;
+    private string $apiBaseV2;
 
     public function __construct(ServerCreateDTO $dto)
     {
         $this->dto = $dto;
+        $this->apiKey     = (string) config('datacenter.gcore.api_key');
+        $this->projectId  = (string) config('datacenter.gcore.project_id', '460993');
+        $this->apiBaseV1  = rtrim((string) config('datacenter.gcore.api_base_v1', 'https://api.gcore.com/cloud/v1'), '/');
+        $this->apiBaseV2  = rtrim((string) config('datacenter.gcore.api_base_v2', 'https://api.gcore.com/cloud/v2'), '/');
     }
 
     public function handle(): void
@@ -42,8 +50,7 @@ class CreateServerJob implements ShouldQueue
             'status'      => 'pending',
         ]);
 
-        $apiKey = config('datacenter.gcore.api_key');
-        $apiUrl = "https://api.gcore.com/cloud/v2/instances/460993/{$this->dto->region_id}";
+        $apiUrl = "{$this->apiBaseV2}/instances/{$this->projectId}/{$this->dto->region_id}";
 
         $payload = [
             'flavor'     => $this->dto->plan,
@@ -63,7 +70,7 @@ class CreateServerJob implements ShouldQueue
             ]]
         ];
 
-        $resp = Http::withHeaders(['Authorization' => "APIKey {$apiKey}"])
+        $resp = Http::withHeaders(['Authorization' => "APIKey {$this->apiKey}"])
             ->post($apiUrl, $payload);
 
         $server->update(['raw_response' => $resp->json() ?: $resp->body()]);
@@ -83,11 +90,9 @@ class CreateServerJob implements ShouldQueue
         }
 
         [$externalId, $ip] = $this->resolveInstanceInfo(
-            projectId: '460993',
             regionId:  $this->dto->region_id,
             vmName:    $this->dto->vm_name,
-            apiKey:    $apiKey,
-            attempts:  6,          // تا ~30s (6 * 5s)
+            attempts:  6,
             sleepSec:  5
         );
 
@@ -104,12 +109,12 @@ class CreateServerJob implements ShouldQueue
         );
     }
 
-    protected function resolveInstanceInfo(string $projectId, string $regionId, string $vmName, string $apiKey, int $attempts = 6, int $sleepSec = 5): array
+    protected function resolveInstanceInfo(string $regionId, string $vmName, int $attempts = 6, int $sleepSec = 5): array
     {
-        $listUrl = "https://api.gcore.com/cloud/v1/instances/{$projectId}/{$regionId}";
+        $listUrl = "{$this->apiBaseV1}/instances/{$this->projectId}/{$regionId}";
 
         for ($i = 0; $i < $attempts; $i++) {
-            $r = Http::withHeaders(['Authorization' => "APIKey {$apiKey}"])->get($listUrl);
+            $r = Http::withHeaders(['Authorization' => "APIKey {$this->apiKey}"])->get($listUrl);
             if ($r->successful()) {
                 $json = $r->json();
                 $results = $json['results'] ?? [];
@@ -168,18 +173,13 @@ class CreateServerJob implements ShouldQueue
 
     protected function friendlyRegion(string $id): string
     {
-        return [
-            '116' => 'Dubai',
-            '104' => 'London',
-            '38'  => 'Frankfurt',
-        ][$id] ?? $id;
+        $key = "telegram.servers.regions.$id";
+        return \Illuminate\Support\Facades\Lang::has($key) ? __($key) : $id;
     }
 
     protected function friendlyPlan(string $code): string
     {
-        return [
-            'g2s-shared-1-1-25' => '1GB RAM / 1 vCPU / 25GB',
-            'g2s-shared-1-2-25' => '2GB RAM / 1 vCPU / 25GB',
-        ][$code] ?? $code;
+        $key = "telegram.servers.plans.$code";
+        return \Illuminate\Support\Facades\Lang::has($key) ? __($key) : $code;
     }
 }

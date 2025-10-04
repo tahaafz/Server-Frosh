@@ -9,6 +9,16 @@ use Illuminate\Support\Facades\Http;
 
 class ServerPanel extends \App\Telegram\Core\AbstractState
 {
+    protected string $gcoreApiKey;
+    protected string $gcoreProjectId;
+    protected string $gcoreApiBaseV1;
+
+    public function __construct()
+    {
+        $this->gcoreApiKey    = (string) config('datacenter.gcore.api_key');
+        $this->gcoreProjectId = (string) config('datacenter.gcore.project_id', '460993');
+        $this->gcoreApiBaseV1 = rtrim((string) config('datacenter.gcore.api_base_v1', 'https://api.gcore.com/cloud/v1'), '/');
+    }
 
     public function onEnter(): void
     {
@@ -53,8 +63,8 @@ class ServerPanel extends \App\Telegram\Core\AbstractState
                 ['text'=>Buttons::label('servers.panel.refresh'), 'data'=>"srv:refresh:{$srv->id}"],
             ],
             [
-                ['text'=>'🔌 Power Off', 'data'=>"srv:act:{$srv->id}:stop"],
-                ['text'=>'⚡️ Power On',  'data'=>"srv:act:{$srv->id}:start"],
+                ['text'=>Buttons::label('servers.panel.power_off', '🔌 Power Off'), 'data'=>"srv:act:{$srv->id}:stop"],
+                ['text'=>Buttons::label('servers.panel.power_on',  '⚡️ Power On'),  'data'=>"srv:act:{$srv->id}:start"],
             ],
             [
                 ['text'=>Buttons::label('servers.panel.delete'), 'data'=>"srv:act:{$srv->id}:delete"],
@@ -72,11 +82,9 @@ class ServerPanel extends \App\Telegram\Core\AbstractState
         if (!$srv || !$srv->external_id) { $this->send(__('telegram.servers.panel.not_enough_info')); return; }
 
         // خواندن وضعیت از API (سریع؛ بدون صف)
-        $apiKey   = config('services.gcore.api_key');
-        $project  = '460993';
-        $listUrl  = "https://api.gcore.com/cloud/v1/instances/{$project}/{$srv->region_id}";
+        $listUrl  = "{$this->gcoreApiBaseV1}/instances/{$this->gcoreProjectId}/{$srv->region_id}";
 
-        $r = Http::withHeaders(['Authorization' => "APIKey {$apiKey}"])->get($listUrl);
+        $r = Http::withHeaders(['Authorization' => "APIKey {$this->gcoreApiKey}"])->get($listUrl);
         if ($r->successful()) {
             $json = $r->json();
             $found = collect($json['results'] ?? [])->firstWhere('id', $srv->external_id);

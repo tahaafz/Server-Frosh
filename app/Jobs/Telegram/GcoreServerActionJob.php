@@ -17,8 +17,15 @@ class GcoreServerActionJob implements ShouldQueue
 {
     use Dispatchable, Queueable, SerializesModels, TgApi;
 
+    private string $apiKey;
+    private string $projectId;
+    private string $apiBaseV1;
+
     public function __construct(public ServerActionDTO $dto)
     {
+        $this->apiKey    = (string) config('datacenter.gcore.api_key');
+        $this->projectId = (string) config('datacenter.gcore.project_id', '460993');
+        $this->apiBaseV1 = rtrim((string) config('datacenter.gcore.api_base_v1', 'https://api.gcore.com/cloud/v1'), '/');
     }
 
     public function handle(): void
@@ -27,16 +34,14 @@ class GcoreServerActionJob implements ShouldQueue
         $srv = Server::find($this->dto->server_id);
         if (!$user || !$srv || !$srv->external_id) return;
 
-        $apiKey = config('services.gcore.api_key');
-        $project = '460993';
-        $base = "https://api.gcore.com/cloud/v1/instances/{$project}/{$srv->region_id}/{$srv->external_id}";
+        $base = "{$this->apiBaseV1}/instances/{$this->projectId}/{$srv->region_id}/{$srv->external_id}";
 
         if ($this->dto->action === 'delete') {
-            $r = Http::withHeaders(['Authorization' => "APIKey {$apiKey}"])
+            $r = Http::withHeaders(['Authorization' => "APIKey {$this->apiKey}"])
                 ->withOptions(['timeout' => 30])
                 ->delete($base);
         } else {
-            $r = Http::withHeaders(['Authorization' => "APIKey {$apiKey}"])
+            $r = Http::withHeaders(['Authorization' => "APIKey {$this->apiKey}"])
                 ->withOptions(['timeout' => 30])
                 ->post("{$base}/{$this->dto->action}");
         }

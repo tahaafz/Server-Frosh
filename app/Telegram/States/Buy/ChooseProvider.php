@@ -8,7 +8,7 @@ class ChooseProvider extends \App\Telegram\Core\AbstractState
     public function onEnter(): void
     {
         $kb = $this->inlineKeyboard([
-            [ ['text'=>'GCore','data'=>$this->pack('prov:gcore')] ],
+            [ ['text'=>\App\Telegram\UI\Buttons::label('provider.gcore', 'GCore'),'data'=>$this->pack('prov:gcore')] ],
             [ ['text'=>\App\Telegram\UI\Buttons::label('back'),'data'=>$this->pack('back:welcome')] ],
         ]);
         $this->sendT('telegram.buy.choose_provider', $kb);

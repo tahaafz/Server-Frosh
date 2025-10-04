@@ -10,16 +10,19 @@ class ChannelGate
 {
     use TgApi;
 
-    public function isChannelLockOn(): bool
+    protected bool $lockOn;
+    protected ?string $channelLink;
+
+    public function __construct()
     {
-        return strtolower((string) config('telegram.channel.lock')) === 'on';
+        $this->lockOn = strtolower((string) config('telegram.channel.lock')) === 'on';
+        $link = (string) config('telegram.channel.link');
+        $this->channelLink = $link !== '' ? $link : null;
     }
 
-    public function chatIdForApi(): string
-    {
-        $link = config('telegram.channel.link');
-        return $link ? '@'.$link : '';
-    }
+    public function isChannelLockOn(): bool { return $this->lockOn; }
+
+    public function chatIdForApi(): string { return $this->channelLink ? '@'.$this->channelLink : ''; }
 
     public function isMember(int|string $telegramUserId): bool
     {
@@ -37,8 +40,7 @@ class ChannelGate
 
     public function sendJoinPrompt(int|string $chatId): void
     {
-        $link = config('telegram.channel.link');
-        $url  = $link ? "https://t.me/{$link}" : null;
+        $url  = $this->channelLink ? "https://t.me/{$this->channelLink}" : null;
 
         $kb = ['inline_keyboard' => array_filter([
             $url ? [ [ 'text' => Buttons::label('channel.join'), 'url' => $url ] ] : null,

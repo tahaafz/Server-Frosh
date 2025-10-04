@@ -22,12 +22,18 @@ final class Buttons
         'servers.panel.refresh' => '🔄 Refresh',
         'servers.panel.delete'  => '🗑 Delete',
         'servers.panel.list'    => '⬅️ List',
+        'servers.panel.power_off' => '🔌 Power Off',
+        'servers.panel.power_on'  => '⚡️ Power On',
         'buy.confirm_and_send'  => '✅ Confirm & Submit',
         'buy.back'              => '⬅️ Back',
         'buy.plan1'             => 'Plan 1',
         'buy.plan2'             => 'Plan 2',
         'os.ubuntu20'           => 'Ubuntu 20',
         'os.ubuntu22'           => 'Ubuntu 22',
+        'provider.gcore'        => 'GCore',
+        'locations.dubai'       => '🇦🇪 Dubai',
+        'locations.london'      => '🇬🇧 London',
+        'locations.frankfurt'   => '🇩🇪 Frankfurt',
     ];
 
     public static function label(string $key, ?string $fallback = null): string
@@ -44,4 +50,3 @@ final class Buttons
         return self::$defaults[$key] ?? $key;
     }
 }
-
