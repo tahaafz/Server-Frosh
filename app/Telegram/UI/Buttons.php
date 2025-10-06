@@ -11,6 +11,7 @@ final class Buttons
         'buy'                    => 'Buy VPS',
         'support'                => 'Support',
         'manage'                 => 'Manage servers',
+        'management'             => 'Management',
         'topup'                  => 'Add balance',
         'approve'                => '✅ Approve',
         'reject'                 => '❌ Reject',

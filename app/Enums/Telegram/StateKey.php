@@ -11,6 +11,7 @@ enum StateKey: string
     case BuyChooseOS       = 'buy.choose_os';
     case Confirm           = 'confirm';
     case Support          = 'support';
+    case AdminManagement  = 'admin.management';
     case ServersList      = 'servers.list';
     case ServersPanel     = 'servers.panel';
     case WalletEnterAmount  = 'wallet.amount';

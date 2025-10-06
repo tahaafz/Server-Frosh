@@ -2,21 +2,30 @@
 
 namespace App\Telegram\UI;
 
+use App\Models\User;
 use App\Telegram\Callback\{Action, CallbackData};
 use App\Telegram\UI\Buttons;
 
 final class KeyboardFactory
 {
-    public static function replyMain(): array
+    public static function replyMain(?User $user = null): array
     {
+        $keyboard = [[
+            Buttons::label('buy'),
+            Buttons::label('support'),
+            Buttons::label('manage'),
+        ]];
+
+        $secondaryRow = [Buttons::label('topup')];
+
+        if ($user?->is_admin) {
+            $secondaryRow[] = Buttons::label('management');
+        }
+
+        $keyboard[] = $secondaryRow;
+
         return [
-            'keyboard' => [[
-                Buttons::label('buy'),
-                Buttons::label('support'),
-                Buttons::label('manage'),
-            ], [
-                Buttons::label('topup'),
-            ]],
+            'keyboard' => $keyboard,
             'resize_keyboard' => true,
             'one_time_keyboard' => false,
         ];

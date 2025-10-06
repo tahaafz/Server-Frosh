@@ -36,6 +36,13 @@ trait MainMenuShortcuts
                 $this->parent->transitionTo(StateKey::ServersList->value);
                 return true;
 
+            case \App\Telegram\UI\Buttons::label('management'):
+                if (!$this->process()->is_admin) {
+                    return false;
+                }
+                $this->parent->transitionTo(StateKey::AdminManagement->value);
+                return true;
+
             default:
                 return false;
         }

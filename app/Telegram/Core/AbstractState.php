@@ -3,6 +3,7 @@
 namespace App\Telegram\Core;
 
 use App\Enums\Telegram\StateKey;
+use App\Models\User;
 use App\Telegram\Callback\{Action, CallbackData};
 use App\Telegram\UI\KeyboardFactory;
 use App\Traits\Telegram\{ReadsUpdate, SendsMessages, PersistsData, MainMenuShortcuts, FlowToken};
@@ -64,7 +65,7 @@ abstract class AbstractState extends State
     /** Main reply keyboard */
     protected function mainMenuKeyboard(): array
     {
-        return KeyboardFactory::replyMain();
+        $record = $this->process();
+        return KeyboardFactory::replyMain($record instanceof User ? $record : null);
     }
 }
-

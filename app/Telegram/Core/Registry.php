@@ -16,6 +16,7 @@ class Registry
             StateKey::BuyChooseOS->value       => \App\Telegram\States\Buy\ChooseOS::class,
             StateKey::Confirm->value           => \App\Telegram\States\Confirm::class,
             StateKey::Support->value           => \App\Telegram\States\Support::class,
+            StateKey::AdminManagement->value   => \App\Telegram\States\Admin\Management::class,
             StateKey::ServersList->value       => \App\Telegram\States\Servers\ListServers::class,
             StateKey::ServersPanel->value      => \App\Telegram\States\Servers\ServerPanel::class,
             StateKey::WalletEnterAmount->value => \App\Telegram\States\Wallet\EnterAmount::class,
