@@ -2,39 +2,78 @@
 
 namespace App\Telegram\States\Buy;
 
-class ChoosePlan extends \App\Telegram\Core\AbstractState
+use App\Enums\Telegram\StateKey;
+use App\Telegram\Callback\Action;
+use App\Telegram\Core\AbstractState;
+use App\Telegram\Nav\NavTarget;
+use App\Telegram\UI\Buttons;
+use App\Telegram\UI\ManagesScreens;
+
+class ChoosePlan extends AbstractState
 {
+    use ManagesScreens;
 
     public function onEnter(): void
     {
-        $this->flow(); // ensure
-        $rawKb = \App\Telegram\UI\KeyboardFactory::inlineBuyPlans('g2s-shared-1-1-25', 'g2s-shared-1-2-25');
-        // pack flow token into every callback_data
-        $kb = ['inline_keyboard' => array_map(function($row) {
-            return array_map(function($btn) {
-                if (isset($btn['callback_data'])) $btn['callback_data'] = $this->pack($btn['callback_data']);
-                return $btn;
-            }, $row);
-        }, $rawKb['inline_keyboard'])];
-        $this->sendT('telegram.buy.choose_plan', $kb);
+        $inline = [
+            [
+                [
+                    'text' => Buttons::label('buy.plan1', 'Plan 1'),
+                    'callback_data' => $this->cbBuild(Action::BuyPlan, ['code' => 'g2s-shared-1-1-25']),
+                ],
+                [
+                    'text' => Buttons::label('buy.plan2', 'Plan 2'),
+                    'callback_data' => $this->cbBuild(Action::BuyPlan, ['code' => 'g2s-shared-1-2-25']),
+                ],
+            ],
+            [
+                [
+                    'text' => __('telegram.buttons.back'),
+                    'callback_data' => $this->cbBuild(Action::NavBack, ['to' => NavTarget::Provider->value]),
+                ],
+            ],
+        ];
+
+        $this->ensureInlineScreen('telegram.buy.choose_plan', ['inline_keyboard' => $inline]);
     }
 
     public function onCallback(string $callbackData, array $update): void
     {
         $parsed = $this->cbParse($callbackData, $update);
-        if (!$parsed) return;
+        if (! $parsed) {
+            $this->onEnter();
 
-        switch ($parsed['action']) {
-            case \App\Telegram\Callback\Action::BuyPlan:
-                $this->putData('plan', $parsed['params']['code'] ?? null);
-                $this->goEnum(\App\Enums\Telegram\StateKey::BuyChooseLocation);
-                return;
-            case \App\Telegram\Callback\Action::NavBack:
-                if (($parsed['params']['to'] ?? '') === \App\Telegram\Nav\NavTarget::Provider->value) {
-                    $this->goEnum(\App\Enums\Telegram\StateKey::BuyChooseProvider);
-                }
-                return;
+            return;
         }
+
+        $action = $parsed['action'];
+        $params = $parsed['params'];
+
+        switch ($action) {
+            case Action::BuyPlan:
+                $this->putData('plan_code', (string) ($params['code'] ?? ''));
+                $this->goEnum(StateKey::BuyChooseLocation);
+
+                return;
+
+            case Action::NavBack:
+                $target = (string) ($params['to'] ?? '');
+
+                if ($target === NavTarget::Provider->value) {
+                    $this->goEnum(StateKey::BuyChooseProvider);
+
+                    return;
+                }
+
+                if ($target === NavTarget::Welcome->value) {
+                    $this->resetToWelcomeMenu();
+
+                    return;
+                }
+
+                break;
+        }
+
         $this->onEnter();
     }
 }

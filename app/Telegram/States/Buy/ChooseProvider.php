@@ -2,25 +2,67 @@
 
 namespace App\Telegram\States\Buy;
 
-class ChooseProvider extends \App\Telegram\Core\AbstractState
+use App\Enums\Telegram\StateKey;
+use App\Telegram\Callback\Action;
+use App\Telegram\Core\AbstractState;
+use App\Telegram\Nav\NavTarget;
+use App\Telegram\UI\Buttons;
+use App\Telegram\UI\ManagesScreens;
+
+class ChooseProvider extends AbstractState
 {
+    use ManagesScreens;
 
     public function onEnter(): void
     {
-        $kb = $this->inlineKeyboard([
-            [ ['text'=>\App\Telegram\UI\Buttons::label('provider.gcore', 'GCore'),'data'=>$this->pack('prov:gcore')] ],
-            [ ['text'=>\App\Telegram\UI\Buttons::label('back'),'data'=>$this->pack('back:welcome')] ],
-        ]);
-        $this->sendT('telegram.buy.choose_provider', $kb);
+        $this->hideReplyKeyboardOnce();
+
+        $inline = [
+            [
+                [
+                    'text' => Buttons::label('provider.gcore', 'Gcore'),
+                    'callback_data' => $this->cbBuild(Action::BuyPlan, ['provider' => 'gcore']),
+                ],
+            ],
+            [
+                [
+                    'text' => __('telegram.buttons.back'),
+                    'callback_data' => $this->cbBuild(Action::NavBack, ['to' => NavTarget::Welcome->value]),
+                ],
+            ],
+        ];
+
+        $this->ensureInlineScreen('telegram.buy.choose_provider', ['inline_keyboard' => $inline], resetAnchor: true);
     }
 
-    public function onCallback(string $data, array $u): void
+    public function onCallback(string $callbackData, array $update): void
     {
-        [$ok,$rest] = $this->validateCallback($data,$u);
-        if (!$ok) return;
+        $parsed = $this->cbParse($callbackData, $update);
+        if (! $parsed) {
+            $this->onEnter();
 
-        if ($rest === 'prov:gcore') { $this->putData('provider','gcore'); $this->goEnum(\App\Enums\Telegram\StateKey::BuyChoosePlan); return; }
-        if ($rest === 'back:welcome') { $this->goEnum(\App\Enums\Telegram\StateKey::Welcome); return; }
+            return;
+        }
+
+        $action = $parsed['action'];
+        $params = $parsed['params'];
+
+        switch ($action) {
+            case Action::BuyPlan:
+                $this->putData('provider', (string) ($params['provider'] ?? 'gcore'));
+                $this->goEnum(StateKey::BuyChoosePlan);
+
+                return;
+
+            case Action::NavBack:
+                if (($params['to'] ?? '') === NavTarget::Welcome->value) {
+                    $this->resetToWelcomeMenu();
+
+                    return;
+                }
+
+                break;
+        }
 
         $this->onEnter();
     }

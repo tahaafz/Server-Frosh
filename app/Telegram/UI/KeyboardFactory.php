@@ -3,8 +3,8 @@
 namespace App\Telegram\UI;
 
 use App\Models\User;
-use App\Telegram\Callback\{Action, CallbackData};
-use App\Telegram\UI\Buttons;
+use App\Telegram\Callback\Action;
+use App\Telegram\Callback\CallbackData;
 
 final class KeyboardFactory
 {
@@ -31,12 +31,32 @@ final class KeyboardFactory
         ];
     }
 
-    public static function inlineBackTo(string $target): array
+    public static function replyBackOnly(): array
     {
-        return ['inline_keyboard' => [[[
-            'text' => Buttons::label('back'),
-            'callback_data' => CallbackData::build(Action::NavBack, ['to' => $target]),
-        ]]]];
+        return [
+            'keyboard' => [[Buttons::label('back')]],
+            'resize_keyboard' => true,
+            'one_time_keyboard' => false,
+        ];
+    }
+
+    public static function removeKeyboard(): array
+    {
+        return ['remove_keyboard' => true];
+    }
+
+
+    public static function inlineBackTo(string $targetKey): array
+    {
+        return [
+            'inline_keyboard' => [[[
+                'text' => __('telegram.buttons.back'),
+                'callback_data' => \App\Telegram\Callback\CallbackData::build(
+                    \App\Telegram\Callback\Action::NavBack,
+                    ['to' => $targetKey]
+                ),
+            ]]],
+        ];
     }
 
     public static function inlineBuyPlans(string $p1, string $p2): array

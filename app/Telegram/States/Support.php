@@ -24,12 +24,14 @@ class Support extends \App\Telegram\Core\AbstractState
 
         if ($this->isBackCommand($text)) {
             $this->goEnum(StateKey::Welcome);
+
             return;
         }
 
         $message = trim($text);
         if ($message === '') {
             $this->sendT('telegram.support.empty_message');
+
             return;
         }
 
@@ -37,16 +39,17 @@ class Support extends \App\Telegram\Core\AbstractState
 
         $this->messenger()->broadcastSupportFromUser($this->process(), $safeMessage);
 
-        $this->sendT('telegram.support.received', $this->mainMenuKeyboard());
+        $this->sendT('telegram.support.received');
     }
 
     public function onPhoto(array $photos, array $u): void
     {
-        $last   = $photos[array_key_last($photos)] ?? null;
+        $last = $photos[array_key_last($photos)] ?? null;
         $fileId = $last['file_id'] ?? null;
 
-        if (!$fileId) {
+        if (! $fileId) {
             $this->sendT('telegram.support.invalid_photo');
+
             return;
         }
 
@@ -60,7 +63,7 @@ class Support extends \App\Telegram\Core\AbstractState
 
         $this->messenger()->broadcastSupportFromUser($this->process(), $safeMessage, $fileId);
 
-        $this->sendT('telegram.support.received_photo', $this->mainMenuKeyboard());
+        $this->sendT('telegram.support.received_photo');
     }
 
     protected function isBackCommand(string $text): bool
@@ -79,5 +82,10 @@ class Support extends \App\Telegram\Core\AbstractState
     protected function messenger(): AdminMessenger
     {
         return app(AdminMessenger::class);
+    }
+
+    protected function defaultReplyKeyboard(): ?array
+    {
+        return $this->backKeyboard();
     }
 }

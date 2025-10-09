@@ -4,10 +4,10 @@ namespace App\Telegram\Core;
 
 use App\Enums\Telegram\StateKey;
 use App\Models\User;
+use App\Support\Telegram\Msg;
 use App\Telegram\Callback\{Action, CallbackData};
 use App\Telegram\UI\KeyboardFactory;
 use App\Traits\Telegram\{ReadsUpdate, SendsMessages, PersistsData, MainMenuShortcuts, FlowToken};
-use Illuminate\Support\Facades\Lang;
 
 abstract class AbstractState extends State
 {
@@ -27,11 +27,7 @@ abstract class AbstractState extends State
 
     protected function resolveText(string $textOrLangKey): string
     {
-        if (str_contains($textOrLangKey, '.')) {
-            $locale = app()->getLocale();
-            if (Lang::has($textOrLangKey, $locale)) return __($textOrLangKey);
-        }
-        return $textOrLangKey;
+        return Msg::resolve($textOrLangKey);
     }
 
     protected function goEnum(StateKey $stateKey): void
@@ -66,6 +62,24 @@ abstract class AbstractState extends State
     protected function mainMenuKeyboard(): array
     {
         $record = $this->process();
+
         return KeyboardFactory::replyMain($record instanceof User ? $record : null);
+    }
+
+    /** Simple back-only reply keyboard */
+    protected function backKeyboard(): array
+    {
+        return KeyboardFactory::replyBackOnly();
+    }
+
+    /** Remove any active reply keyboard */
+    protected function hideKeyboard(): array
+    {
+        return KeyboardFactory::removeKeyboard();
+    }
+
+    protected function defaultReplyKeyboard(): ?array
+    {
+        return null;
     }
 }

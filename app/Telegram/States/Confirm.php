@@ -3,32 +3,51 @@
 namespace App\Telegram\States;
 
 use App\DTOs\ServerCreateDTO;
+use App\Enums\Telegram\StateKey;
 use App\Jobs\Telegram\CreateServerJob;
-use Illuminate\Support\Str;
+use App\Telegram\Core\AbstractState;
 use App\Telegram\UI\Buttons;
+use App\Telegram\UI\ManagesScreens;
+use Illuminate\Support\Str;
 
-class Confirm extends \App\Telegram\Core\AbstractState
+class Confirm extends AbstractState
 {
+    use ManagesScreens;
 
     public function onEnter(): void
     {
-        $txt = __('telegram.buy.summary_title')."\n"
-            . '• Provider: <code>'.strtoupper($this->getData('provider','gcore'))."</code>\n"
-            . '• Plan: <code>'.$this->getData('plan','—')."</code>\n"
-            . '• Region: <code>'.$this->getData('region_id','—')."</code>\n"
-            . '• OS: <code>'.$this->getData('os_image_id','—')."</code>";
+        $summary = __('telegram.buy.summary_title')."\n"
+            . '• Provider: <code>'.strtoupper($this->getData('provider', 'gcore'))."</code>\n"
+            . '• Plan: <code>'.$this->getData('plan_code', '—')."</code>\n"
+            . '• Region: <code>'.$this->getData('region_id', '—')."</code>\n"
+            . '• OS: <code>'.$this->getData('os_image_id', '—')."</code>";
 
-        $kb = $this->inlineKeyboard([
-            [ ['text'=>Buttons::label('buy.confirm_and_send'),'data'=>$this->pack('confirm:yes')] ],
-            [ ['text'=>Buttons::label('buy.back'),'data'=>$this->pack('back:os')] ],
-        ]);
-        $this->edit($txt, $kb);
+        $inline = [
+            [
+                [
+                    'text' => Buttons::label('buy.confirm_and_send'),
+                    'callback_data' => $this->pack('confirm:yes'),
+                ],
+            ],
+            [
+                [
+                    'text' => Buttons::label('buy.back'),
+                    'callback_data' => $this->pack('back:os'),
+                ],
+            ],
+        ];
+
+        $this->ensureInlineScreen($summary, ['inline_keyboard' => $inline]);
     }
 
-    public function onCallback(string $data, array $u): void
+    public function onCallback(string $data, array $update): void
     {
-        [$ok,$rest] = $this->validateCallback($data,$u);
-        if (!$ok) return;
+        [$ok, $rest] = $this->validateCallback($data, $update);
+        if (! $ok || $rest === null) {
+            $this->onEnter();
+
+            return;
+        }
 
         if ($rest === 'confirm:yes') {
             $user = $this->process();
@@ -40,8 +59,8 @@ class Confirm extends \App\Telegram\Core\AbstractState
 
             $dto = ServerCreateDTO::fromArray([
                 'user_id'     => $user->id,
-                'provider'    => $this->getData('provider','gcore'),
-                'plan'        => $this->getData('plan'),
+                'provider'    => $this->getData('provider', 'gcore'),
+                'plan'        => $this->getData('plan_code'),
                 'region_id'   => $this->getData('region_id'),
                 'os_image_id' => $this->getData('os_image_id'),
                 'vm_name'     => $vmName,
@@ -52,12 +71,22 @@ class Confirm extends \App\Telegram\Core\AbstractState
             CreateServerJob::dispatch($dto);
 
             $this->send(__('telegram.buy.submitted'));
+
             return;
         }
+
         if ($rest === 'back:os') {
-            $this->goEnum(\\App\\Enums\\Telegram\\StateKey::BuyChooseOS);
+            $this->goEnum(StateKey::BuyChooseOS);
+
             return;
         }
+
+        if ($rest === 'back:welcome') {
+            $this->resetToWelcomeMenu();
+
+            return;
+        }
+
         $this->onEnter();
     }
 }

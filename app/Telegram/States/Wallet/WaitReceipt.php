@@ -92,4 +92,9 @@ class WaitReceipt extends \App\Telegram\Core\AbstractState
 
         $this->onEnter();
     }
+
+    protected function defaultReplyKeyboard(): ?array
+    {
+        return $this->backKeyboard();
+    }
 }

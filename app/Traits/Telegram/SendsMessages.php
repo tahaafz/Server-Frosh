@@ -21,12 +21,22 @@ trait SendsMessages
         ];
     }
 
-    protected function send(string $text, ?array $replyMarkup = null): void
+    protected function send(string $text, ?array $replyMarkup = null, bool $trackMessage = true): void
     {
         $p = $this->process();
-        $resp = $this->tgSend($p->telegram_chat_id, $text, $replyMarkup);
-        $p->tg_last_message_id = $resp->messageId ?? $p->tg_last_message_id;
-        $p->save();
+        if ($replyMarkup === null && method_exists($this, 'defaultReplyKeyboard')) {
+            $replyMarkup = $this->defaultReplyKeyboard();
+        }
+
+        $resp = $this->tgSend($p->telegram_chat_id, $text, $replyMarkup ?: null);
+        if ($trackMessage && $resp) {
+            $messageId = $resp->messageId ?? $resp->message_id ?? null;
+
+            if ($messageId) {
+                $p->tg_last_message_id = (int) $messageId;
+                $p->save();
+            }
+        }
     }
 
     protected function edit(string $text, ?array $replyMarkup = null): void

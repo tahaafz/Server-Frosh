@@ -2,42 +2,82 @@
 
 namespace App\Telegram\States\Buy;
 
-class ChooseLocation extends \App\Telegram\Core\AbstractState
+use App\Enums\Telegram\StateKey;
+use App\Telegram\Callback\Action;
+use App\Telegram\Core\AbstractState;
+use App\Telegram\Nav\NavTarget;
+use App\Telegram\UI\Buttons;
+use App\Telegram\UI\ManagesScreens;
+
+class ChooseLocation extends AbstractState
 {
+    use ManagesScreens;
 
     public function onEnter(): void
     {
-        $inlineKeyboard = [
+        $inline = [
             [
-                ['text' => \App\Telegram\UI\Buttons::label('locations.dubai', '🇦🇪 Dubai'),     'callback_data' => $this->cbBuild(\App\Telegram\Callback\Action::BuyLocation, ['id' => 116])],
-                ['text' => \App\Telegram\UI\Buttons::label('locations.london', '🇬🇧 London'),    'callback_data' => $this->cbBuild(\App\Telegram\Callback\Action::BuyLocation, ['id' => 104])],
-                ['text' => \App\Telegram\UI\Buttons::label('locations.frankfurt', '🇩🇪 Frankfurt'), 'callback_data' => $this->cbBuild(\App\Telegram\Callback\Action::BuyLocation, ['id' => 38 ])],
+                [
+                    'text' => Buttons::label('locations.dubai', '🇦🇪 Dubai'),
+                    'callback_data' => $this->cbBuild(Action::BuyLocation, ['id' => 116]),
+                ],
+                [
+                    'text' => Buttons::label('locations.london', '🇬🇧 London'),
+                    'callback_data' => $this->cbBuild(Action::BuyLocation, ['id' => 104]),
+                ],
+                [
+                    'text' => Buttons::label('locations.frankfurt', '🇩🇪 Frankfurt'),
+                    'callback_data' => $this->cbBuild(Action::BuyLocation, ['id' => 38]),
+                ],
             ],
             [
-                ['text' => \App\Telegram\UI\Buttons::label('back'), 'callback_data' => $this->cbBackTo(\App\Telegram\Nav\NavTarget::Plan->value)],
+                [
+                    'text' => __('telegram.buttons.back'),
+                    'callback_data' => $this->cbBuild(Action::NavBack, ['to' => NavTarget::Plan->value]),
+                ],
             ],
         ];
-        $this->editT('telegram.buy.choose_location', ['inline_keyboard' => $inlineKeyboard]);
+
+        $this->ensureInlineScreen('telegram.buy.choose_location', ['inline_keyboard' => $inline]);
     }
 
     public function onCallback(string $callbackData, array $update): void
     {
         $parsed = $this->cbParse($callbackData, $update);
-        if (!$parsed) { $this->onEnter(); return; }
+        if (! $parsed) {
+            $this->onEnter();
 
-        switch ($parsed['action']) {
-            case \App\Telegram\Callback\Action::BuyLocation:
-                $selectedRegionId = (string)($parsed['params']['id'] ?? '');
-                $this->putData('region_id', $selectedRegionId);
-                $this->goEnum(\App\Enums\Telegram\StateKey::BuyChooseOS);
-                return;
-            case \App\Telegram\Callback\Action::NavBack:
-                $targetKey = (string)($parsed['params']['to'] ?? '');
-                if ($targetKey === \App\Telegram\Nav\NavTarget::Plan->value) {
-                    $this->goEnum(\App\Enums\Telegram\StateKey::BuyChoosePlan);
-                }
-                return;
+            return;
         }
+
+        $action = $parsed['action'];
+        $params = $parsed['params'];
+
+        switch ($action) {
+            case Action::BuyLocation:
+                $this->putData('region_id', (string) ($params['id'] ?? ''));
+                $this->goEnum(StateKey::BuyChooseOS);
+
+                return;
+
+            case Action::NavBack:
+                $target = (string) ($params['to'] ?? '');
+
+                if ($target === NavTarget::Plan->value) {
+                    $this->goEnum(StateKey::BuyChoosePlan);
+
+                    return;
+                }
+
+                if ($target === NavTarget::Welcome->value) {
+                    $this->resetToWelcomeMenu();
+
+                    return;
+                }
+
+                break;
+        }
+
         $this->onEnter();
     }
 }

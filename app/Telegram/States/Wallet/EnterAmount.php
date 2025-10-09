@@ -26,4 +26,9 @@ class EnterAmount extends \App\Telegram\Core\AbstractState
 
         $this->goEnum(\App\Enums\Telegram\StateKey::WalletWaitReceipt);
     }
+
+    protected function defaultReplyKeyboard(): ?array
+    {
+        return $this->backKeyboard();
+    }
 }

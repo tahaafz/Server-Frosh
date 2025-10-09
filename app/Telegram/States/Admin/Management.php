@@ -17,7 +17,7 @@ class Management extends AbstractState
             return;
         }
 
-        $this->sendT('telegram.admin.management_intro', $this->managementKeyboard());
+        $this->sendT('telegram.admin.management_intro');
     }
 
     public function onText(string $text, array $update): void
@@ -39,7 +39,7 @@ class Management extends AbstractState
         $query = trim($text);
 
         if ($query === '') {
-            $this->sendT('telegram.admin.management_intro', $this->managementKeyboard());
+            $this->sendT('telegram.admin.management_intro');
 
             return;
         }
@@ -47,12 +47,12 @@ class Management extends AbstractState
         $user = $this->findTargetUser($query);
 
         if (! $user) {
-            $this->send(__('telegram.admin.user_not_found'), $this->managementKeyboard());
+            $this->send(__('telegram.admin.user_not_found'));
 
             return;
         }
 
-        $this->send($this->formatUserDetails($user), $this->managementKeyboard());
+        $this->send($this->formatUserDetails($user));
     }
 
     private function ensureAdmin(): ?User
@@ -66,14 +66,6 @@ class Management extends AbstractState
         }
 
         return $record;
-    }
-
-    private function managementKeyboard(): array
-    {
-        $keyboard = $this->mainMenuKeyboard();
-        $keyboard['keyboard'][] = [Buttons::label('cancel')];
-
-        return $keyboard;
     }
 
     private function isCancelCommand(string $text): bool
@@ -137,5 +129,10 @@ class Management extends AbstractState
             'last_message_at' => $user->last_message_at?->format('Y-m-d H:i') ?? '—',
             'balance' => number_format($user->balance),
         ]);
+    }
+
+    protected function defaultReplyKeyboard(): ?array
+    {
+        return $this->replyKeyboard([[Buttons::label('cancel')]]);
     }
 }

@@ -13,7 +13,7 @@ trait FlowToken
         $p = $this->process();
         $d = $p->tg_data ?? [];
         $d['flow_id'] = Str::upper(Str::random(6));
-        unset($d['plan'], $d['region_id'], $d['os_image_id'], $d['vm_name'], $d['login_pass']);
+        unset($d['plan'], $d['plan_code'], $d['region_id'], $d['os_image_id'], $d['vm_name'], $d['login_pass']);
         $d['provider'] = $d['provider'] ?? 'gcore';
         $p->tg_data = $d; $p->save();
         return $d['flow_id'];
