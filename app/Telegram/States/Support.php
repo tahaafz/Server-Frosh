@@ -2,90 +2,23 @@
 
 namespace App\Telegram\States;
 
-use App\Enums\Telegram\StateKey;
 use App\Services\Telegram\Admin\AdminMessenger;
-use App\Telegram\UI\Buttons;
+use App\Telegram\Core\AbstractState;
+use App\Telegram\UI\KeyboardFactory;
 
-use function e;
-
-class Support extends \App\Telegram\Core\AbstractState
+class Support extends AbstractState
 {
     public function onEnter(): void
     {
-        $this->newFlow();
-        $this->sendT('telegram.support.prompt');
+        $this->expireInlineScreen(); // اگر از خرید آمد، لنگر اینلاین را ببند
+        $this->sendWithReplyKeyboard('telegram.support.enter', \App\Telegram\UI\KeyboardFactory::replyBackOnly());
     }
 
     public function onText(string $text, array $u): void
     {
-        if ($this->interceptShortcuts($text)) {
-            return;
-        }
+        if ($this->interceptShortcuts($text)) return;
 
-        if ($this->isBackCommand($text)) {
-            $this->goEnum(StateKey::Welcome);
-
-            return;
-        }
-
-        $message = trim($text);
-        if ($message === '') {
-            $this->sendT('telegram.support.empty_message');
-
-            return;
-        }
-
-        $safeMessage = e($message);
-
-        $this->messenger()->broadcastSupportFromUser($this->process(), $safeMessage);
-
-        $this->sendT('telegram.support.received');
-    }
-
-    public function onPhoto(array $photos, array $u): void
-    {
-        $last = $photos[array_key_last($photos)] ?? null;
-        $fileId = $last['file_id'] ?? null;
-
-        if (! $fileId) {
-            $this->sendT('telegram.support.invalid_photo');
-
-            return;
-        }
-
-        $caption = (string) data_get($u, 'message.caption', '');
-        $message = trim($caption);
-        if ($message === '') {
-            $message = __('telegram.support.photo_without_caption');
-        }
-
-        $safeMessage = e($message);
-
-        $this->messenger()->broadcastSupportFromUser($this->process(), $safeMessage, $fileId);
-
-        $this->sendT('telegram.support.received_photo');
-    }
-
-    protected function isBackCommand(string $text): bool
-    {
-        $normalized = trim($text);
-
-        if ($normalized === Buttons::label('back')) {
-            return true;
-        }
-
-        $lower = mb_strtolower($normalized);
-
-        return in_array($lower, ['back', '/back'], true);
-    }
-
-    protected function messenger(): AdminMessenger
-    {
-        return app(AdminMessenger::class);
-    }
-
-    protected function defaultReplyKeyboard(): ?array
-    {
-        return $this->backKeyboard();
+        app(AdminMessenger::class)->broadcastSupportFromUser($this->process(), $text);
+        $this->sendWithReplyKeyboard('telegram.support.sent', \App\Telegram\UI\KeyboardFactory::replyBackOnly());
     }
 }

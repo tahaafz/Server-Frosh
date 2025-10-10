@@ -2,82 +2,32 @@
 
 namespace App\Telegram\States\Buy;
 
-use App\Enums\Telegram\StateKey;
 use App\Telegram\Callback\Action;
-use App\Telegram\Core\AbstractState;
-use App\Telegram\Nav\NavTarget;
-use App\Telegram\UI\Buttons;
-use App\Telegram\UI\ManagesScreens;
+use App\Telegram\Core\DeclarativeState;
+use App\Telegram\UI\{Btn, Row, InlineMenu};
 
-class ChooseLocation extends AbstractState
+class ChooseLocation extends DeclarativeState
 {
-    use ManagesScreens;
-
-    public function onEnter(): void
+    protected function screen(): array
     {
-        $inline = [
-            [
-                [
-                    'text' => Buttons::label('locations.dubai', '🇦🇪 Dubai'),
-                    'callback_data' => $this->cbBuild(Action::BuyLocation, ['id' => 116]),
-                ],
-                [
-                    'text' => Buttons::label('locations.london', '🇬🇧 London'),
-                    'callback_data' => $this->cbBuild(Action::BuyLocation, ['id' => 104]),
-                ],
-                [
-                    'text' => Buttons::label('locations.frankfurt', '🇩🇪 Frankfurt'),
-                    'callback_data' => $this->cbBuild(Action::BuyLocation, ['id' => 38]),
-                ],
-            ],
-            [
-                [
-                    'text' => __('telegram.buttons.back'),
-                    'callback_data' => $this->cbBuild(Action::NavBack, ['to' => NavTarget::Plan->value]),
-                ],
-            ],
-        ];
+        $menu = InlineMenu::make(
+            Row::make(
+                Btn::key('telegram.regions.dubai',     Action::BuyLocation, ['id'=>116]),
+                Btn::key('telegram.regions.london',    Action::BuyLocation, ['id'=>104]),
+                Btn::key('telegram.regions.frankfurt', Action::BuyLocation, ['id'=>38 ]),
+            ),
+        )->backTo('buy.plan');
 
-        $this->ensureInlineScreen('telegram.buy.choose_location', ['inline_keyboard' => $inline]);
+        return ['text'=>'telegram.buy.choose_location','menu'=>$menu];
     }
 
-    public function onCallback(string $callbackData, array $update): void
+    protected function routes(): array
     {
-        $parsed = $this->cbParse($callbackData, $update);
-        if (! $parsed) {
-            $this->onEnter();
-
-            return;
-        }
-
-        $action = $parsed['action'];
-        $params = $parsed['params'];
-
-        switch ($action) {
-            case Action::BuyLocation:
-                $this->putData('region_id', (string) ($params['id'] ?? ''));
-                $this->goEnum(StateKey::BuyChooseOS);
-
-                return;
-
-            case Action::NavBack:
-                $target = (string) ($params['to'] ?? '');
-
-                if ($target === NavTarget::Plan->value) {
-                    $this->goEnum(StateKey::BuyChoosePlan);
-
-                    return;
-                }
-
-                if ($target === NavTarget::Welcome->value) {
-                    $this->resetToWelcomeMenu();
-
-                    return;
-                }
-
-                break;
-        }
-
-        $this->onEnter();
+        return [
+            Action::BuyLocation->value => function(array $params){
+                $this->putData('region_id', (string)($params['id'] ?? ''));
+                $this->goKey('buy.os');
+            },
+        ];
     }
 }

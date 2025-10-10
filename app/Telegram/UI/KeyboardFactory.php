@@ -2,90 +2,28 @@
 
 namespace App\Telegram\UI;
 
-use App\Models\User;
-use App\Telegram\Callback\Action;
-use App\Telegram\Callback\CallbackData;
-
 final class KeyboardFactory
 {
-    public static function replyMain(?User $user = null): array
+    public static function replyMain(): array
     {
-        $keyboard = [[
-            Buttons::label('buy'),
-            Buttons::label('support'),
-            Buttons::label('manage'),
-        ]];
-
-        $secondaryRow = [Buttons::label('topup')];
-
-        if ($user?->is_admin) {
-            $secondaryRow[] = Buttons::label('management');
-        }
-
-        $keyboard[] = $secondaryRow;
-
         return [
-            'keyboard' => $keyboard,
-            'resize_keyboard' => true,
+            'keyboard' => [[
+                __('telegram.buttons.buy'),
+                __('telegram.buttons.support'),
+                __('telegram.buttons.manage'),
+            ],[
+                __('telegram.buttons.topup'),
+            ]],
+            'resize_keyboard'   => true,
             'one_time_keyboard' => false,
         ];
     }
-
     public static function replyBackOnly(): array
     {
         return [
-            'keyboard' => [[Buttons::label('back')]],
-            'resize_keyboard' => true,
+            'keyboard' => [[ __('telegram.buttons.back_main') ]],
+            'resize_keyboard'   => true,
             'one_time_keyboard' => false,
         ];
-    }
-
-    public static function removeKeyboard(): array
-    {
-        return ['remove_keyboard' => true];
-    }
-
-
-    public static function inlineBackTo(string $targetKey): array
-    {
-        return [
-            'inline_keyboard' => [[[
-                'text' => __('telegram.buttons.back'),
-                'callback_data' => \App\Telegram\Callback\CallbackData::build(
-                    \App\Telegram\Callback\Action::NavBack,
-                    ['to' => $targetKey]
-                ),
-            ]]],
-        ];
-    }
-
-    public static function inlineBuyPlans(string $p1, string $p2): array
-    {
-        return ['inline_keyboard' => [
-            [[
-                'text' => Buttons::label('buy.plan1', 'Plan 1'),
-                'callback_data' => CallbackData::build(Action::BuyPlan, ['code' => $p1]),
-            ], [
-                'text' => Buttons::label('buy.plan2', 'Plan 2'),
-                'callback_data' => CallbackData::build(Action::BuyPlan, ['code' => $p2]),
-            ]],
-            [[
-                'text' => Buttons::label('back'),
-                'callback_data' => CallbackData::build(Action::NavBack, ['to' => \App\Telegram\Nav\NavTarget::Provider->value]),
-            ]],
-        ]];
-    }
-
-    public static function inlineTopupModeration(int $reqId): array
-    {
-        return ['inline_keyboard' => [[
-            [
-                'text' => Buttons::label('approve'),
-                'callback_data' => CallbackData::build(Action::TopupApprove, ['id' => $reqId]),
-            ], [
-                'text' => Buttons::label('reject'),
-                'callback_data' => CallbackData::build(Action::TopupReject, ['id' => $reqId]),
-            ],
-        ]]];
     }
 }

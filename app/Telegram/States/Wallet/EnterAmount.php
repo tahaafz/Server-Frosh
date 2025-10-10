@@ -1,34 +1,29 @@
 <?php
+
+// app/Telegram/States/Wallet/EnterAmount.php
 namespace App\Telegram\States\Wallet;
 
-use App\Support\Telegram\Text;
+use App\Telegram\Core\AbstractState;
+use App\Telegram\UI\KeyboardFactory;
 
-class EnterAmount extends \App\Telegram\Core\AbstractState
+class EnterAmount extends AbstractState
 {
-
     public function onEnter(): void
     {
-        $this->newFlow();
-        $this->sendT('telegram.wallet.enter_amount');
+        $this->expireInlineScreen();
+        $this->sendWithReplyKeyboard('telegram.wallet.enter_amount', \App\Telegram\UI\KeyboardFactory::replyBackOnly());
     }
 
     public function onText(string $text, array $u): void
     {
         if ($this->interceptShortcuts($text)) return;
 
-        $amount = Text::parseAmountToman($text);
-        if (!$amount || $amount < 50000) {
-            $this->send(__('telegram.wallet.invalid_amount'));
+        $amount = (int)preg_replace('/[^\d]/u','',$text);
+        if ($amount <= 0) {
+            $this->sendWithReplyKeyboard('telegram.wallet.invalid_amount', \App\Telegram\UI\KeyboardFactory::replyBackOnly());
             return;
         }
-        $this->putData('topup_amount', $amount);
-        $this->putData('topup_method', 'card');
-
-        $this->goEnum(\App\Enums\Telegram\StateKey::WalletWaitReceipt);
-    }
-
-    protected function defaultReplyKeyboard(): ?array
-    {
-        return $this->backKeyboard();
+        $this->putData('topup_amount',$amount);
+        $this->goKey('wallet.wait_receipt');
     }
 }

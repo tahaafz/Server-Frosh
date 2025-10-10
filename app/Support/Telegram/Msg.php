@@ -6,16 +6,12 @@ use Illuminate\Support\Facades\Lang;
 
 final class Msg
 {
-    public static function resolve(string $textOrLangKey): string
+    public static function resolve(string $textOrKey, array $vars = [], ?string $locale=null): string
     {
-        if (str_contains($textOrLangKey, '.')) {
-            $locale = app()->getLocale();
-
-            if (Lang::has($textOrLangKey, $locale)) {
-                return __($textOrLangKey);
-            }
+        $translated = __($textOrKey, $vars, $locale);
+        if ($translated === $textOrKey && !\Illuminate\Support\Facades\Lang::has($textOrKey, $locale)) {
+            return '[MISSING: '.$textOrKey.']';
         }
-
-        return $textOrLangKey;
+        return $translated;
     }
 }

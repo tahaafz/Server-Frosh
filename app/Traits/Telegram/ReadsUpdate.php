@@ -11,7 +11,6 @@ trait ReadsUpdate
             return;
         }
 
-        // ترتیب مهم است: اول photo، بعد document، بعد text
         if ($photos = data_get($u, 'message.photo')) {
             $this->onPhoto($photos, $u);
             return;
@@ -24,6 +23,10 @@ trait ReadsUpdate
 
         $text = data_get($u, 'message.text');
         if ($text !== null && $text !== '') {
+            if (method_exists($this, 'interceptShortcuts') && $this->interceptShortcuts($text)) {
+                return;
+            }
+
             $this->onText($text, $u);
             return;
         }
@@ -31,7 +34,6 @@ trait ReadsUpdate
         $this->onUnknown($u);
     }
 
-    // پیش‌فرض‌ها (استیت‌ها می‌توانند override کنند)
     protected function onText(string $text, array $u): void {}
     protected function onCallback(string $data, array $u): void {}
     protected function onPhoto(array $photos, array $u): void {}

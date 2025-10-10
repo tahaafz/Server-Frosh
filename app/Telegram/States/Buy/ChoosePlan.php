@@ -2,78 +2,31 @@
 
 namespace App\Telegram\States\Buy;
 
-use App\Enums\Telegram\StateKey;
 use App\Telegram\Callback\Action;
-use App\Telegram\Core\AbstractState;
-use App\Telegram\Nav\NavTarget;
-use App\Telegram\UI\Buttons;
-use App\Telegram\UI\ManagesScreens;
+use App\Telegram\Core\DeclarativeState;
+use App\Telegram\UI\{Btn, Row, InlineMenu};
 
-class ChoosePlan extends AbstractState
+class ChoosePlan extends DeclarativeState
 {
-    use ManagesScreens;
-
-    public function onEnter(): void
+    protected function screen(): array
     {
-        $inline = [
-            [
-                [
-                    'text' => Buttons::label('buy.plan1', 'Plan 1'),
-                    'callback_data' => $this->cbBuild(Action::BuyPlan, ['code' => 'g2s-shared-1-1-25']),
-                ],
-                [
-                    'text' => Buttons::label('buy.plan2', 'Plan 2'),
-                    'callback_data' => $this->cbBuild(Action::BuyPlan, ['code' => 'g2s-shared-1-2-25']),
-                ],
-            ],
-            [
-                [
-                    'text' => __('telegram.buttons.back'),
-                    'callback_data' => $this->cbBuild(Action::NavBack, ['to' => NavTarget::Provider->value]),
-                ],
-            ],
-        ];
+        $menu = InlineMenu::make(
+            Row::make(
+                Btn::key('telegram.plans.g2s_shared_1_1_25', Action::BuyPlan, ['code'=>'g2s-shared-1-1-25']),
+                Btn::key('telegram.plans.g2s_shared_1_2_25', Action::BuyPlan, ['code'=>'g2s-shared-1-2-25'])
+            )
+        )->backTo('buy.provider');
 
-        $this->ensureInlineScreen('telegram.buy.choose_plan', ['inline_keyboard' => $inline]);
+        return ['text'=>'telegram.buy.choose_plan','menu'=>$menu];
     }
 
-    public function onCallback(string $callbackData, array $update): void
+    protected function routes(): array
     {
-        $parsed = $this->cbParse($callbackData, $update);
-        if (! $parsed) {
-            $this->onEnter();
-
-            return;
-        }
-
-        $action = $parsed['action'];
-        $params = $parsed['params'];
-
-        switch ($action) {
-            case Action::BuyPlan:
-                $this->putData('plan_code', (string) ($params['code'] ?? ''));
-                $this->goEnum(StateKey::BuyChooseLocation);
-
-                return;
-
-            case Action::NavBack:
-                $target = (string) ($params['to'] ?? '');
-
-                if ($target === NavTarget::Provider->value) {
-                    $this->goEnum(StateKey::BuyChooseProvider);
-
-                    return;
-                }
-
-                if ($target === NavTarget::Welcome->value) {
-                    $this->resetToWelcomeMenu();
-
-                    return;
-                }
-
-                break;
-        }
-
-        $this->onEnter();
+        return [
+            Action::BuyPlan->value => function(array $p){
+                $this->putData('plan_code', (string)($p['code'] ?? ''));
+                $this->goKey('buy.location');
+            },
+        ];
     }
 }

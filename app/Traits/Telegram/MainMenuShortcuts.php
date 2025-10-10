@@ -2,75 +2,47 @@
 
 namespace App\Traits\Telegram;
 
-use App\Enums\Telegram\StateKey;
-use App\Support\Telegram\Text;
-use App\Telegram\UI\Buttons;
-
 trait MainMenuShortcuts
 {
-    use FlowToken, PersistsData;
-
     protected function interceptShortcuts(?string $text): bool
     {
-        if ($text === null) {
-            return false;
-        }
+        if ($text === null) return false;
 
-        $choice = trim($text);
-        $normalized = Text::normalize($choice);
+        $buyLabel     = __('telegram.buttons.buy');
+        $supportLabel = __('telegram.buttons.support');
+        $manageLabel  = __('telegram.buttons.manage');
+        $topupLabel   = __('telegram.buttons.topup');
+        $backMain     = __('telegram.buttons.back_main');
 
-        if ($normalized === null) {
-            return false;
-        }
-
-        $labels = [
-            'buy' => Text::normalize(Buttons::label('buy')),
-            'topup' => Text::normalize(Buttons::label('topup')),
-            'support' => Text::normalize(Buttons::label('support')),
-            'manage' => Text::normalize(Buttons::label('manage')),
-            'management' => Text::normalize(Buttons::label('management')),
-            'back' => Text::normalize(Buttons::label('back')),
-        ];
-
-        switch (true) {
-            case $normalized === $labels['buy'] || $normalized === 'buy':
+        switch ($text) {
+            case $buyLabel:
+                $this->expireInlineScreen();
                 $this->newFlow();
-                $this->putData('provider', $this->getData('provider', 'gcore'));
-                $this->parent->transitionTo(StateKey::BuyChooseProvider->value);
-
+                $this->goKey('buy.provider');
                 return true;
 
-            case $normalized === $labels['topup'] || $normalized === 'topup':
+            case $supportLabel:
+                $this->expireInlineScreen();
                 $this->newFlow();
-                $this->parent->transitionTo(StateKey::WalletEnterAmount->value);
-
+                $this->goKey('support');
                 return true;
 
-            case $normalized === $labels['support'] || $normalized === 'support':
-                $this->parent->transitionTo(StateKey::Support->value);
-
+            case $manageLabel:
+                $this->expireInlineScreen();
+                $this->newFlow();
+                $this->goKey('servers.list');
                 return true;
 
-            case $normalized === $labels['manage'] || $normalized === 'manage':
-                $this->parent->transitionTo(StateKey::ServersList->value);
-
+            case $topupLabel:
+                $this->expireInlineScreen();
+                $this->newFlow();
+                $this->goKey('wallet.enter_amount');
                 return true;
 
-            case $normalized === $labels['management'] || $normalized === 'management':
-                if (! $this->process()->is_admin) {
-                    return false;
-                }
-                $this->parent->transitionTo(StateKey::AdminManagement->value);
-
+            case $backMain:
+                $this->resetToWelcomeMenu();
                 return true;
-
-            case $normalized === $labels['back'] || $normalized === 'back':
-                $this->parent->transitionTo(StateKey::Welcome->value);
-
-                return true;
-
-            default:
-                return false;
         }
+        return false;
     }
 }

@@ -2,68 +2,34 @@
 
 namespace App\Telegram\States\Buy;
 
-use App\Enums\Telegram\StateKey;
 use App\Telegram\Callback\Action;
-use App\Telegram\Core\AbstractState;
-use App\Telegram\Nav\NavTarget;
-use App\Telegram\UI\Buttons;
-use App\Telegram\UI\ManagesScreens;
+use App\Telegram\Core\DeclarativeState;
+use App\Telegram\UI\{Btn, Row, InlineMenu};
 
-class ChooseProvider extends AbstractState
+class ChooseProvider extends DeclarativeState
 {
-    use ManagesScreens;
-
-    public function onEnter(): void
+    protected function screen(): array
     {
-        $this->hideReplyKeyboardOnce();
+        $menu = InlineMenu::make(
+            Row::make(
+                Btn::key('telegram.providers.gcore', Action::BuyPlan, ['provider'=>'gcore'])
+            )
+        );
 
-        $inline = [
-            [
-                [
-                    'text' => Buttons::label('provider.gcore', 'Gcore'),
-                    'callback_data' => $this->cbBuild(Action::BuyPlan, ['provider' => 'gcore']),
-                ],
-            ],
-            [
-                [
-                    'text' => __('telegram.buttons.back'),
-                    'callback_data' => $this->cbBuild(Action::NavBack, ['to' => NavTarget::Welcome->value]),
-                ],
-            ],
+        return [
+            'text'         => 'telegram.buy.choose_provider',
+            'menu'         => $menu,
+            'reset_anchor' => true, // پیام اینلاین جدید؛ اما replyMain تغییری نمی‌کند
         ];
-
-        $this->ensureInlineScreen('telegram.buy.choose_provider', ['inline_keyboard' => $inline], resetAnchor: true);
     }
 
-    public function onCallback(string $callbackData, array $update): void
+    protected function routes(): array
     {
-        $parsed = $this->cbParse($callbackData, $update);
-        if (! $parsed) {
-            $this->onEnter();
-
-            return;
-        }
-
-        $action = $parsed['action'];
-        $params = $parsed['params'];
-
-        switch ($action) {
-            case Action::BuyPlan:
-                $this->putData('provider', (string) ($params['provider'] ?? 'gcore'));
-                $this->goEnum(StateKey::BuyChoosePlan);
-
-                return;
-
-            case Action::NavBack:
-                if (($params['to'] ?? '') === NavTarget::Welcome->value) {
-                    $this->resetToWelcomeMenu();
-
-                    return;
-                }
-
-                break;
-        }
-
-        $this->onEnter();
+        return [
+            Action::BuyPlan->value => function(array $p){
+                $this->putData('provider', (string)($p['provider'] ?? 'gcore'));
+                $this->goKey('buy.plan');
+            },
+        ];
     }
 }
