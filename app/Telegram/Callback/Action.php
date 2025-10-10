@@ -8,6 +8,7 @@ enum Action: string
     case BuyPlan         = 'buy.plan';
     case BuyLocation     = 'buy.location';
     case BuyOS           = 'buy.os';
+    case BuyConfirm      = 'buy.confirm';
     case ServersPanel    = 'srv.panel';
     case ServerAction    = 'srv.act';
     case TopupCancel     = 'topup.cancel';
@@ -15,4 +16,3 @@ enum Action: string
     case TopupReject     = 'topup.reject';
     case AdminReplyStart = 'admin.reply.start';
 }
-

@@ -3,6 +3,8 @@
 namespace App\Services\Telegram\Admin;
 
 use App\DTOs\Telegram\TelegramUpdateDTO;
+use App\Enums\SupportTicketType;
+use App\Models\SupportTicket;
 use App\Models\User;
 use App\Services\Telegram\TopupApprovalService;
 use App\Traits\Telegram\TgApi;
@@ -36,7 +38,19 @@ class AdminInboxRouter
                 }
                 if ($p['action'] === \App\Telegram\Callback\Action::AdminReplyStart) {
                     $targetUserId = (int)($p['params']['user'] ?? 0);
-                    $this->rememberReplyTarget($actor, $targetUserId);
+                    $ticketId = (int)($p['params']['ticket'] ?? 0);
+
+                    $ticket = SupportTicket::query()
+                        ->whereKey($ticketId)
+                        ->where('user_id', $targetUserId)
+                        ->where('type', SupportTicketType::Question)
+                        ->first();
+
+                    if (!$ticket) {
+                        return false;
+                    }
+
+                    $this->rememberReplyTarget($actor, $targetUserId, $ticket->id);
                     $this->tgSend($actor->telegram_chat_id, __('telegram.admin.reply_prompt'));
                     return true;
                 }
@@ -44,7 +58,13 @@ class AdminInboxRouter
         }
 
         if ($dto->text && ($target = $this->replyTarget($actor))) {
-            $user = User::find($target);
+            $user = User::find($target['user_id']);
+            $ticket = SupportTicket::find($target['ticket_id']);
+
+            if ($ticket && $ticket->type === SupportTicketType::Question) {
+                $ticket->markAsAnswered($dto->text, $actor);
+            }
+
             if ($user && $user->telegram_chat_id) {
                 $this->tgSend($user->telegram_chat_id, __('telegram.admin.support_reply_prefix')."\n".$dto->text);
                 $this->tgSend($actor->telegram_chat_id, __('telegram.admin.reply_sent'));
@@ -54,11 +74,16 @@ class AdminInboxRouter
         }
 
         if (($photos = data_get($dto->raw,'message.photo')) && ($target = $this->replyTarget($actor))) {
-            $user = User::find($target);
+            $user = User::find($target['user_id']);
+            $ticket = SupportTicket::find($target['ticket_id']);
             $last = $photos[array_key_last($photos)] ?? null;
             $fileId = $last['file_id'] ?? null;
 
             if ($user && $user->telegram_chat_id && $fileId) {
+                if ($ticket && $ticket->type === SupportTicketType::Question) {
+                    $ticket->markAsAnswered('[photo] '.$fileId, $actor);
+                }
+
                 $this->tgSendPhoto($user->telegram_chat_id, $fileId, __('telegram.admin.support_reply_photo'));
                 $this->tgSend($actor->telegram_chat_id, __('telegram.admin.reply_photo_sent'));
             } else {
@@ -71,22 +96,23 @@ class AdminInboxRouter
         return false;
     }
 
-    private function rememberReplyTarget(User $actor, int $targetUserId): void
+    private function rememberReplyTarget(User $actor, int $targetUserId, int $ticketId): void
     {
-        if ($targetUserId <= 0) {
+        if ($targetUserId <= 0 || $ticketId <= 0) {
             return;
         }
 
         $data = $actor->tg_data ?? [];
         $data['admin_reply_target'] = [
             'user_id' => $targetUserId,
+            'ticket_id' => $ticketId,
             'expires_at' => Carbon::now()->addMinutes(10)->toIso8601String(),
         ];
 
         $actor->forceFill(['tg_data' => $data])->save();
     }
 
-    private function replyTarget(User $actor): ?int
+    private function replyTarget(User $actor): ?array
     {
         $data = $actor->tg_data['admin_reply_target'] ?? null;
         if (!$data) {
@@ -94,7 +120,9 @@ class AdminInboxRouter
         }
 
         $userId = (int)($data['user_id'] ?? 0);
-        if ($userId <= 0) {
+        $ticketId = (int)($data['ticket_id'] ?? 0);
+
+        if ($userId <= 0 || $ticketId <= 0) {
             $this->forgetReplyTarget($actor);
             return null;
         }
@@ -105,7 +133,10 @@ class AdminInboxRouter
             return null;
         }
 
-        return $userId;
+        return [
+            'user_id' => $userId,
+            'ticket_id' => $ticketId,
+        ];
     }
 
     private function forgetReplyTarget(User $actor): void

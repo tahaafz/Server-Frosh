@@ -2,6 +2,7 @@
 
 namespace App\Services\Telegram\Admin;
 
+use App\Models\SupportTicket;
 use App\Models\TopupRequest;
 use App\Models\User;
 use App\Traits\Telegram\TgApi;
@@ -41,28 +42,41 @@ class AdminMessenger
         });
     }
 
-    public function broadcastSupportFromUser(User $from, string $text, ?string $photoFileId = null): void
+    public function broadcastSupportFromUser(SupportTicket $ticket, ?string $photoFileId = null): void
     {
+        $ticket->loadMissing('user');
+        $from = $ticket->user;
+
+        if (!$from) {
+            return;
+        }
+
         $cap = __('telegram.admin.support_from_user_title')."\n"
-            . "User: <code>{$from->id}</code> • TG: <code>{$from->telegram_user_id}</code>\n\n"
-            . $text;
+            . "Ticket: <code>{$ticket->id}</code> • User: <code>{$from->id}</code> • TG: <code>{$from->telegram_user_id}</code>\n\n"
+            . $ticket->message;
 
         $kb = [
             'inline_keyboard' => [[[
                 'text' => Buttons::label('reply'),
-                'callback_data' => \App\Telegram\Callback\CallbackData::build(\App\Telegram\Callback\Action::AdminReplyStart, ['user' => $from->id]),
+                'callback_data' => \App\Telegram\Callback\CallbackData::build(\App\Telegram\Callback\Action::AdminReplyStart, [
+                    'user' => $from->id,
+                    'ticket' => $ticket->id,
+                ]),
             ]]],
         ];
 
-        User::query()->where('is_admin',true)->whereNotNull('telegram_chat_id')->chunkById(200, function($admins) use ($cap,$kb,$photoFileId) {
-            foreach ($admins as $a) {
-                if ($photoFileId) {
-                    $this->tgSendPhoto($a->telegram_chat_id, $photoFileId, $cap, $kb);
-                } else {
-                    $this->tgSend($a->telegram_chat_id, $cap, $kb);
+        User::query()
+            ->where('is_admin', true)
+            ->whereNotNull('telegram_chat_id')
+            ->chunkById(200, function ($admins) use ($cap, $kb, $photoFileId) {
+                foreach ($admins as $a) {
+                    if ($photoFileId) {
+                        $this->tgSendPhoto($a->telegram_chat_id, $photoFileId, $cap, $kb);
+                    } else {
+                        $this->tgSend($a->telegram_chat_id, $cap, $kb);
+                    }
                 }
-            }
-        });
+            });
     }
 
     public function notifyAll(string $html): void
