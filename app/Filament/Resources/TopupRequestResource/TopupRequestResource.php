@@ -3,33 +3,44 @@
 namespace App\Filament\Resources\TopupRequestResource;
 
 use App\Models\TopupRequest;
+use App\Models\User;
+use App\Services\Telegram\TopupApprovalService;
+use BackedEnum;
+use InvalidArgumentException;
+use UnitEnum;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
-use function App\Filament\Resources\notification;
-use function App\Filament\Resources\schema;
 
 class TopupRequestResource extends Resource
 {
     protected static ?string $model = TopupRequest::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-banknotes';
-    protected static ?string $navigationGroup = 'مالی';
+    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-banknotes';
+    protected static null|string|UnitEnum $navigationGroup = 'مالی';
     protected static ?string $navigationLabel = 'درخواست‌های افزایش موجودی (دارای تصویر)';
 
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
-            ->whereNotNull('receipt_media_id')
-            ->orWhereNotNull('receipt_file_id')
-            ->when(schema()->hasColumn((new TopupRequest)->getTable(), 'status'), function ($q) {
-                $q->where('status', 'pending');
-            });
+            ->where(function (Builder $query) {
+                $query
+                    ->whereNotNull('receipt_media_id')
+                    ->orWhereNotNull('receipt_file_id');
+            })
+            ->when(
+                Schema::hasColumn((new TopupRequest())->getTable(), 'status'),
+                fn (Builder $query) => $query->where('status', 'pending')
+            );
     }
 
     public static function table(Table $table): Table
@@ -46,13 +57,7 @@ class TopupRequestResource extends Resource
                     ->height(96)->width(96)
                     ->circular(false)
                     ->getStateUsing(function (TopupRequest $record) {
-                        $media = $record->receiptMedia ?? null;
-                        $path  = method_exists($media, 'fullPath') ? $media->fullPath() : ($media->path ?? null);
-                        if ($path) return Storage::url($path);
-                        if (!empty($record->receipt_file_id)) {
-                            return route('admin.topup.receipt.proxy', $record); // تعریف این route اختیاری است
-                        }
-                        return null;
+                        return static::receiptUrl($record);
                     })
                     ->extraAttributes(['class' => 'cursor-pointer'])
                     ->action(static::reviewAction()),
@@ -75,7 +80,7 @@ class TopupRequestResource extends Resource
                         'rejected' => 'رد شده',
                     ])
                     ->default('pending')
-                    ->visible(fn () => schema()->hasColumn((new TopupRequest)->getTable(), 'status')),
+                    ->visible(fn () => Schema::hasColumn((new TopupRequest())->getTable(), 'status')),
             ])
             ->actions([
                 static::reviewAction(),
@@ -83,29 +88,19 @@ class TopupRequestResource extends Resource
                     ->label('تایید')
                     ->icon('heroicon-m-check')
                     ->color('success')
-                    ->visible(fn (TopupRequest $record) => $record->status === 'pending')
+                    ->visible(fn (TopupRequest $record) => $record->status === 'pending' || $record->status === null)
                     ->requiresConfirmation()
                     ->action(function (TopupRequest $record) {
-                        $record->forceFill([
-                            'status'       => 'approved',
-                            'admin_id'     => auth()->id(),
-                            'approved_at'  => now(),
-                        ])->save();
-                        notification()->success('درخواست تایید شد.');
+                        static::processTopupAction($record, 'approve');
                     }),
                 Action::make('reject')
                     ->label('رد')
                     ->icon('heroicon-m-x-mark')
                     ->color('danger')
-                    ->visible(fn (TopupRequest $record) => $record->status === 'pending')
+                    ->visible(fn (TopupRequest $record) => $record->status === 'pending' || $record->status === null)
                     ->requiresConfirmation()
                     ->action(function (TopupRequest $record) {
-                        $record->forceFill([
-                            'status'       => 'rejected',
-                            'admin_id'     => auth()->id(),
-                            'approved_at'  => null,
-                        ])->save();
-                        notification()->success('درخواست رد شد.');
+                        static::processTopupAction($record, 'reject');
                     }),
             ])
             ->bulkActions([]);
@@ -121,9 +116,7 @@ class TopupRequestResource extends Resource
             ->modalCancelAction(false)
             ->modalWidth('4xl')
             ->modalContent(function (TopupRequest $record) {
-                $media = $record->receiptMedia ?? null;
-                $path  = method_exists($media, 'fullPath') ? $media->fullPath() : ($media->path ?? null);
-                $url   = $path ? Storage::url($path) : null;
+                $url   = static::receiptUrl($record);
                 $img   = $url ? "<img src=\"{$url}\" alt=\"receipt\" class=\"w-full h-auto rounded-xl\">" : "<div class=\"text-center py-8\">تصویر در دسترس نیست</div>";
                 $meta  = "<div class=\"text-sm text-gray-600 dark:text-gray-300 text-center mt-4\">
                     <div>کاربر: <strong>".e(optional($record->user)->name ?? '-')."</strong></div>
@@ -139,12 +132,7 @@ class TopupRequestResource extends Resource
                     ->icon('heroicon-m-check')
                     ->color('success')
                     ->action(function (TopupRequest $record) {
-                        $record->forceFill([
-                            'status'       => 'approved',
-                            'admin_id'     => auth()->id(),
-                            'approved_at'  => now(),
-                        ])->save();
-                        notification()->success('درخواست تایید شد.');
+                        static::processTopupAction($record, 'approve');
                     })
                     ->close(),
                 Action::make('rejectModal')
@@ -153,12 +141,7 @@ class TopupRequestResource extends Resource
                     ->color('danger')
                     ->requiresConfirmation()
                     ->action(function (TopupRequest $record) {
-                        $record->forceFill([
-                            'status'       => 'rejected',
-                            'admin_id'     => auth()->id(),
-                            'approved_at'  => null,
-                        ])->save();
-                        notification()->success('درخواست رد شد.');
+                        static::processTopupAction($record, 'reject');
                     })
                     ->close(),
                 Action::make('cancel')
@@ -173,5 +156,82 @@ class TopupRequestResource extends Resource
         return [
             'index' => Pages\ListTopupRequests::route('/'),
         ];
+    }
+
+    protected static function notifySuccess(string $message): void
+    {
+        Notification::make()
+            ->title($message)
+            ->success()
+            ->send();
+    }
+
+    protected static function notifyError(string $message): void
+    {
+        Notification::make()
+            ->title($message)
+            ->danger()
+            ->send();
+    }
+
+    protected static function receiptUrl(TopupRequest $record): ?string
+    {
+        $media = $record->receiptMedia;
+
+        if ($media) {
+            $path = $media->fullPath();
+
+            if ($path) {
+                $diskName = $media->driver ?: 'media';
+
+                if (!config("filesystems.disks.{$diskName}")) {
+                    $diskName = 'public';
+                }
+
+                try {
+                    $disk = Storage::disk($diskName);
+                } catch (InvalidArgumentException) {
+                    $disk = Storage::disk('public');
+                }
+
+                if ($disk->exists($path)) {
+                    return $disk->url($path);
+                }
+            }
+        }
+
+        if (!empty($record->receipt_file_id) && Route::has('admin.topup.receipt.proxy')) {
+            return route('admin.topup.receipt.proxy', $record);
+        }
+
+        return null;
+    }
+
+    protected static function processTopupAction(TopupRequest $record, string $action): void
+    {
+        $admin = auth()->user();
+
+        if (!$admin instanceof User || !$admin->is_admin) {
+            static::notifyError('دسترسی مجاز نیست.');
+            return;
+        }
+
+        $currentStatus = $record->status;
+        if ($currentStatus !== null && $currentStatus !== 'pending') {
+            static::notifyError('این درخواست قبلاً بررسی شده است.');
+            return;
+        }
+
+        app(TopupApprovalService::class)->handle($admin, $action, $record->getKey());
+
+        $record->refresh();
+
+        if ($record->status === 'approved' && $action === 'approve') {
+            static::notifySuccess('درخواست تایید شد و موجودی کاربر افزایش یافت.');
+        } elseif ($record->status === 'rejected' && $action === 'reject') {
+            static::notifySuccess('درخواست رد شد و به کاربر اطلاع داده شد.');
+        } else {
+            static::notifyError('عدم موفقیت در بروزرسانی درخواست.');
+        }
     }
 }
