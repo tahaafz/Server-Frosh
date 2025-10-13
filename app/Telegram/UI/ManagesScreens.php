@@ -59,11 +59,13 @@ trait ManagesScreens
         }
     }
 
-    protected function resetToWelcomeMenu(): void
+    protected function resetToWelcomeMenu(bool $resetAnchor = true): void
     {
         $user = $this->process();
 
-        $this->expireInlineScreen();
+        if ($resetAnchor) {
+            $this->expireInlineScreen();
+        }
 
         Telegram::sendMessage([
             'chat_id'      => $user->telegram_chat_id,

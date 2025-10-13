@@ -7,12 +7,33 @@ use App\Jobs\Telegram\ArchiveTelegramPhotoJob;
 use App\Services\Telegram\Admin\AdminMessenger;
 use App\Telegram\Core\AbstractState;
 use App\Telegram\UI\KeyboardFactory;
+use Illuminate\Contracts\Config\Repository as Config;
 
 class WaitReceipt extends AbstractState
 {
+    private string $cardNumber;
+    private string $cardHolder;
+
+    public function __construct(Config $config)
+    {
+        $this->cardNumber = (string) $config->get('payment.card_number');
+        $this->cardHolder = (string) $config->get('payment.card_holder');
+    }
+
     public function onEnter(): void
     {
-        $this->sendT('telegram.wallet.send_receipt');
+        $amount = (int) $this->getData('topup_amount', 0);
+        $formattedAmount = number_format($amount);
+
+        $this->sendT(
+            'telegram.wallet.manual_topup_instructions',
+            [
+                'amount' => $formattedAmount,
+                'card_number' => $this->cardNumber,
+                'card_holder' => $this->cardHolder,
+            ],
+            KeyboardFactory::replyBackOnly()
+        );
     }
 
     public function onPhoto(array $photos, array $u): void
@@ -39,5 +60,6 @@ class WaitReceipt extends AbstractState
         app(AdminMessenger::class)->broadcastTopupRequest($req);
 
         $this->send(__('telegram.wallet.received'), \App\Telegram\UI\KeyboardFactory::replyBackOnly());
+        $this->resetToWelcomeMenu($resetAnchor = false);
     }
 }

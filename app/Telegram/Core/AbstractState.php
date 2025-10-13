@@ -20,11 +20,11 @@ abstract class AbstractState extends State
     use ManagesScreens;
 
 
-    protected function sendT(string $textOrKey, ?array $replyMarkup=null, string $parseMode='HTML'): void
-    { $this->send(Msg::resolve($textOrKey), $replyMarkup, $parseMode); }
+    protected function sendT(string $textOrKey, array $vars = [], ?array $replyMarkup=null, string $parseMode='HTML'): void
+    { $this->send(Msg::resolve($textOrKey, $vars), $replyMarkup, $parseMode); }
 
-    protected function editT(string $textOrKey, ?array $replyMarkup=null, string $parseMode='HTML'): void
-    { $this->edit(Msg::resolve($textOrKey), $replyMarkup, $parseMode); }
+    protected function editT(string $textOrKey, array $vars = [], ?array $replyMarkup=null, string $parseMode='HTML'): void
+    { $this->edit(Msg::resolve($textOrKey, $vars), $replyMarkup, $parseMode); }
 
     protected function goEnum(\App\Enums\Telegram\StateKey $k): void { $this->parent->transitionTo($k->value); }
     protected function goKey(string $k): void { $this->parent->transitionTo($k); }
