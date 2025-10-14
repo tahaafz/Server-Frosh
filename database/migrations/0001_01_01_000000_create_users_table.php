@@ -26,6 +26,7 @@ return new class extends Migration {
             $table->unsignedInteger('message_count')->default(0);
             $table->timestamp('last_message_at')->nullable();
             $table->unsignedBigInteger('balance')->default(0);
+            $table->unsignedBigInteger('cart_total')->default(0);
             $table->rememberToken();
             $table->timestamps();
         });
