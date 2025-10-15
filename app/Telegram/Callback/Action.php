@@ -15,4 +15,9 @@ enum Action: string
     case TopupApprove    = 'topup.approve';
     case TopupReject     = 'topup.reject';
     case AdminReplyStart = 'admin.reply.start';
+
+    case Back            = 'back';
+    case CatalogPick     = 'cat.pick';        // انتخاب دکمه از tg_states (cat.pick:{id})
+    case CheckoutTopup   = 'checkout.topup';  // رفتن به WaitReceipt
+    case CheckoutSubmit  = 'checkout.submit'; //
 }

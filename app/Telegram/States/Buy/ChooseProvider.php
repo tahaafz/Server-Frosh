@@ -2,34 +2,12 @@
 
 namespace App\Telegram\States\Buy;
 
-use App\Telegram\Callback\Action;
-use App\Telegram\Core\DeclarativeState;
-use App\Telegram\UI\{Btn, Row, InlineMenu};
+use App\Enums\Telegram\StateKey;
+use App\Telegram\States\Support\CategoryDrivenState;
 
-class ChooseProvider extends DeclarativeState
+class ChooseProvider extends CategoryDrivenState
 {
-    protected function screen(): array
-    {
-        $menu = InlineMenu::make(
-            Row::make(
-                Btn::key('telegram.providers.gcore', Action::BuyPlan, ['provider'=>'gcore'])
-            )
-        );
-
-        return [
-            'text'         => 'telegram.buy.choose_provider',
-            'menu'         => $menu,
-            'reset_anchor' => true, // پیام اینلاین جدید؛ اما replyMain تغییری نمی‌کند
-        ];
-    }
-
-    protected function routes(): array
-    {
-        return [
-            Action::BuyPlan->value => function(array $p){
-                $this->putData('provider', (string)($p['provider'] ?? 'gcore'));
-                $this->goKey('buy.plan');
-            },
-        ];
-    }
+    protected StateKey $stateKey        = StateKey::BuyChooseProvider;
+    protected string   $textKey         = 'telegram.buy.choose_provider';
+    protected bool     $resetCartOnEnter = true;
 }

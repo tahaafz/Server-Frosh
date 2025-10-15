@@ -2,32 +2,54 @@
 
 namespace App\Telegram\States\Buy;
 
+use App\Enums\Telegram\StateKey;
+use App\Services\Checkout\Calculator;
 use App\Telegram\Callback\Action;
 use App\Telegram\Core\DeclarativeState;
 use App\Telegram\UI\{Btn, Row, InlineMenu};
+use App\Services\Cart\UserCart;
 
 class Confirm extends DeclarativeState
 {
-    protected function screen(): array
+    public function onEnter(): void
     {
-        $provider = $this->getData('provider','gcore');
-        $plan     = $this->getData('plan_code','');
-        $region   = $this->getData('region_id','');
-        $os       = $this->getData('os_code','');
+        $user = $this->process();
+        $sum  = (new Calculator())->summarize($user);
 
-        $text = __('telegram.buy.confirm', compact('provider','plan','region','os'));
+        if ($sum['sufficient']) {
+            $user->balance   -= (int) $user->cart_total;
+            $user->cart_total = 0;
+            $user->save();
+
+            $this->goKey(StateKey::BuySubmit->value);
+            return;
+        }
 
         $menu = InlineMenu::make(
-            Row::make( Btn::key('telegram.buttons.confirm', Action::BuyConfirm) )
-        )->backTo('buy.os');
+            Row::make(Btn::key('telegram.buttons.increase_balance', Action::CheckoutTopup->value))
+        )->backTo(Action::Back->value, 'telegram.buttons.back');
 
-        return ['text'=>$text,'menu'=>$menu];
+        $this->sayKey('telegram.buy.checkout.insufficient', menu: $menu, vars: [
+            'cart'    => number_format($sum['cart']),
+            'balance' => number_format($sum['balance']),
+            'deficit' => number_format($sum['deficit']),
+        ]);
     }
 
-    protected function routes(): array
+    public function onText(?string $text): void
     {
-        return [
-            Action::BuyConfirm->value => fn()=> $this->goKey('buy.submit'),
-        ];
+        $payload = trim((string) $text);
+
+        if ($payload === Action::CheckoutTopup->value) {
+            $this->goKey(StateKey::WalletWaitReceipt->value);
+            return;
+        }
+
+        if ($payload === Action::Back->value) {
+            $this->goKey(StateKey::BuyReview->value);
+            return;
+        }
+
+        $this->silent();
     }
 }
