@@ -12,7 +12,7 @@ class Support extends AbstractState
 {
     public function onEnter(): void
     {
-        $this->expireInlineScreen(); // اگر از خرید آمد، لنگر اینلاین را ببند
+        $this->expireInlineScreen();
         $this->sendWithReplyKeyboard('telegram.support.enter', KeyboardFactory::replyBackOnly());
     }
 
