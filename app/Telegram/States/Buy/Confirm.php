@@ -3,13 +3,14 @@
 namespace App\Telegram\States\Buy;
 
 use App\Enums\Telegram\StateKey;
-use App\Services\Checkout\Calculator;
+use App\Services\Calculator;
 use App\Telegram\Callback\Action;
+use App\Telegram\Core\AbstractState;
 use App\Telegram\Core\DeclarativeState;
 use App\Telegram\UI\{Btn, Row, InlineMenu};
 use App\Services\Cart\UserCart;
 
-class Confirm extends DeclarativeState
+class Confirm extends AbstractState
 {
     public function onEnter(): void
     {
@@ -36,7 +37,7 @@ class Confirm extends DeclarativeState
         ]);
     }
 
-    public function onText(?string $text): void
+    public function onText(?string $text, array $u): void
     {
         $payload = trim((string) $text);
 
