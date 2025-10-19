@@ -4,7 +4,7 @@ namespace App\Telegram\States\Buy;
 
 use App\Enums\Telegram\StateKey;
 use App\Models\User;
-use App\Services\Checkout\Calculator;
+use App\Services\Calculator;
 use App\Telegram\States\Support\CategoryDrivenState;
 
 class Review extends CategoryDrivenState

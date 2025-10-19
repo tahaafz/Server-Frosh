@@ -17,8 +17,11 @@ class RowBuilder
         $current = [];
 
         foreach ($buttons as $btn) {
-            $payload = Action::CatalogPick->value . ':' . $btn->id;
-            $tgBtn   = Btn::key($btn->title_key, $payload); // متن دکمه از lang
+            $tgBtn = Btn::key(
+                $btn->title_key,
+                Action::CatalogPick,
+                ['id' => $btn->id]
+            ); // متن دکمه از lang
 
             if ($btn->layout === 'below' || empty($current)) {
                 if (!empty($current)) {

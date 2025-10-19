@@ -6,9 +6,7 @@ use App\Enums\Telegram\StateKey;
 use App\Services\Calculator;
 use App\Telegram\Callback\Action;
 use App\Telegram\Core\AbstractState;
-use App\Telegram\Core\DeclarativeState;
 use App\Telegram\UI\{Btn, Row, InlineMenu};
-use App\Services\Cart\UserCart;
 
 class Confirm extends AbstractState
 {
@@ -27,19 +25,55 @@ class Confirm extends AbstractState
         }
 
         $menu = InlineMenu::make(
-            Row::make(Btn::key('telegram.buttons.increase_balance', Action::CheckoutTopup->value))
-        )->backTo(Action::Back->value, 'telegram.buttons.back');
+            Row::make(Btn::key('telegram.buttons.increase_balance', Action::CheckoutTopup))
+        )->backTo(StateKey::BuyReview->value, 'telegram.buttons.back');
 
-        $this->sayKey('telegram.buy.checkout.insufficient', menu: $menu, vars: [
-            'cart'    => number_format($sum['cart']),
-            'balance' => number_format($sum['balance']),
-            'deficit' => number_format($sum['deficit']),
-        ]);
+        $this->sendT(
+            'telegram.buy.checkout.insufficient',
+            [
+                'cart'    => number_format($sum['cart']),
+                'balance' => number_format($sum['balance']),
+                'deficit' => number_format($sum['deficit']),
+            ],
+            $menu->toTelegram(fn(string $raw) => $this->pack($raw))
+        );
     }
 
-    public function onText(?string $text, array $u): void
+    public function onCallback(string $callbackData, array $u): void
     {
-        $payload = trim((string) $text);
+        $parsed = $this->cbParse($callbackData, $u);
+        if (!$parsed) {
+            return;
+        }
+
+        $action = $parsed['action'];
+        if ($action === Action::CheckoutTopup) {
+            $this->goKey(StateKey::WalletWaitReceipt->value);
+            return;
+        }
+
+        if ($action === Action::NavBack) {
+            $target = (string) ($parsed['params']['to'] ?? '');
+            if ($target === '') {
+                $target = StateKey::BuyReview->value;
+            }
+
+            if ($target === 'welcome') {
+                $this->resetToWelcomeMenu();
+                return;
+            }
+
+            $this->goKey($target);
+        }
+    }
+
+    public function onText(string $text, array $u): void
+    {
+        if ($this->interceptShortcuts($text)) {
+            return;
+        }
+
+        $payload = trim($text);
 
         if ($payload === Action::CheckoutTopup->value) {
             $this->goKey(StateKey::WalletWaitReceipt->value);
@@ -48,9 +82,6 @@ class Confirm extends AbstractState
 
         if ($payload === Action::Back->value) {
             $this->goKey(StateKey::BuyReview->value);
-            return;
         }
-
-        $this->silent();
     }
 }

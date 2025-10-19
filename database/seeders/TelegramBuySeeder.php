@@ -73,7 +73,6 @@ class TelegramBuySeeder extends Seeder
                         [
                             'title_key' => $b['title_key'],
                             'price'     => (int) ($b['price'] ?? 0),
-                            'layout'    => $b['layout'] ?? 'beside',
                             'sort'      => (int) ($b['sort'] ?? (($i + 1) * 10)),
                             'active'    => true,
                         ]

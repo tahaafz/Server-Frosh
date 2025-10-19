@@ -34,6 +34,15 @@ abstract class CategoryDrivenState extends DeclarativeState
         return [];
     }
 
+    protected function sayKey(string $key, ?InlineMenu $menu = null, array $vars = []): void
+    {
+        $markup = $menu
+            ? $menu->toTelegram(fn(string $raw) => $this->pack($raw))
+            : null;
+
+        $this->sendT($key, $vars, $markup);
+    }
+
     public function onEnter(): void
     {
         $user = $this->process();
@@ -44,18 +53,56 @@ abstract class CategoryDrivenState extends DeclarativeState
 
         $slug     = $this->stateKey->categorySlug(); // از enum
         $category = Category::query()->where('slug', $slug)->firstOrFail();
-        $buttons  = $category->buttons()->get();
+        $buttons  = $category->states()->get();
 
         $rows = RowBuilder::build($buttons);
         $menu = InlineMenu::make(...$rows);
 
-        if ($this->stateKey->back()) {
-            $menu->backTo(Action::Back->value, 'telegram.buttons.back');
+        if ($prev = $this->stateKey->back()) {
+            $menu->backTo($prev->value, 'telegram.buttons.back');
         }
 
         $vars = (array) $this->enterEffects($user);
 
         $this->sayKey($this->textKey, menu: $menu, vars: $vars);
+    }
+
+    public function onCallback(string $callbackData, array $u): void
+    {
+        $parsed = $this->cbParse($callbackData, $u);
+        if (!$parsed) {
+            return;
+        }
+
+        $action = $parsed['action'];
+
+        if ($action === Action::CatalogPick) {
+            $id = (int) ($parsed['params']['id'] ?? 0);
+            if ($id <= 0) {
+                $this->silent();
+                return;
+            }
+
+            $btn = CategoryState::query()->with('category')->find($id);
+            if (!$btn) {
+                $this->silent();
+                return;
+            }
+
+            $this->selectCategoryState($btn);
+            return;
+        }
+
+        if ($action === Action::NavBack) {
+            $target = (string) ($parsed['params']['to'] ?? '');
+            $prev   = $this->stateKey->back();
+            if ($prev !== null && $target === $prev->value) {
+                $this->handleBack($prev);
+                return;
+            }
+        }
+
+        parent::onCallback($callbackData, $u);
     }
 
     public function onText(string $text, array $u): void
@@ -74,26 +121,11 @@ abstract class CategoryDrivenState extends DeclarativeState
         $prefix = Action::CatalogPick->value . ':';
         if (str_starts_with($payload, $prefix)) {
             $id  = (int) substr($payload, strlen($prefix));
-            $btn = CategoryState::query()->with('category')->findOrFail($id);
-
-            DB::transaction(function () use ($btn) {
-                $user = $this->process();
-
-                if ($btn->price > 0) {
-                    UserCart::add($user, (int) $btn->price);
-                }
-
-                $data = (array) ($user->tg_data ?? []);
-                $slug = $btn->category->slug;
-                $data['choices'][$slug]     = $btn->code ?? $btn->title_key;
-                $data['choices_ids'][$slug] = $btn->id;
-                $user->forceFill(['tg_data' => $data])->save();
-            });
-
-            if ($next = $this->stateKey->next()) {
-                $this->goKey($next->value);
+            $btn = CategoryState::query()->with('category')->find($id);
+            if ($btn) {
+                $this->selectCategoryState($btn);
             } else {
-                $this->goKey(StateKey::BuyConfirm->value);
+                $this->silent();
             }
             return;
         }
@@ -121,5 +153,30 @@ abstract class CategoryDrivenState extends DeclarativeState
         $user->forceFill(['tg_data' => $data])->save();
 
         $this->goKey($prev->value);
+    }
+
+    protected function selectCategoryState(CategoryState $btn): void
+    {
+        $btn->loadMissing('category');
+
+        DB::transaction(function () use ($btn) {
+            $user = $this->process();
+
+            if ($btn->price > 0) {
+                UserCart::add($user, (int) $btn->price);
+            }
+
+            $data = (array) ($user->tg_data ?? []);
+            $slug = $btn->category->slug;
+            $data['choices'][$slug]     = $btn->code ?? $btn->title_key;
+            $data['choices_ids'][$slug] = $btn->id;
+            $user->forceFill(['tg_data' => $data])->save();
+        });
+
+        if ($next = $this->stateKey->next()) {
+            $this->goKey($next->value);
+        } else {
+            $this->goKey(StateKey::BuyConfirm->value);
+        }
     }
 }
