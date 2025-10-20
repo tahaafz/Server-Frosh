@@ -62,4 +62,14 @@ class WaitReceipt extends AbstractState
         $this->send(__('telegram.wallet.received'), \App\Telegram\UI\KeyboardFactory::replyBackOnly());
         $this->resetToWelcomeMenu($resetAnchor = false);
     }
+
+    protected function onText(string $text, array $u): void
+    {
+        $this->send(__('telegram.wallet.invalid_photo'), KeyboardFactory::replyBackOnly());
+    }
+
+    protected function onDocument(array $doc, array $u): void
+    {
+        $this->send(__('telegram.wallet.invalid_photo'), KeyboardFactory::replyBackOnly());
+    }
 }

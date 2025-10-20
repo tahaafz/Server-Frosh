@@ -40,6 +40,13 @@ abstract class CategoryDrivenState extends DeclarativeState
             ? $menu->toTelegram(fn(string $raw) => $this->pack($raw))
             : null;
 
+        $user = $this->process();
+
+        if ($user->tg_last_message_id) {
+            $this->editT($key, $vars, $markup);
+            return;
+        }
+
         $this->sendT($key, $vars, $markup);
     }
 

@@ -3,7 +3,6 @@
 namespace App\Traits\Telegram;
 
 use Telegram\Bot\Laravel\Facades\Telegram;
-
 trait TgApi
 {
     protected function tgSend(int|string $chatId, string $text, ?array $replyMarkup = null, string $parseMode = 'HTML'): ?object
@@ -70,4 +69,30 @@ trait TgApi
         return Telegram::sendPhoto($payload);
     }
 
+    /**
+     * Reacts to a message with the provided reaction payload.
+     */
+    protected function tgReact(int|string $chatId, int $messageId, array $reaction, bool $isBig = false): bool
+    {
+        if (empty($reaction)) {
+            return false;
+        }
+
+        $reactionPayload = array_is_list($reaction) ? $reaction : [$reaction];
+
+        $payload = [
+            'chat_id'    => $chatId,
+            'message_id' => $messageId,
+            'reaction'   => json_encode($reactionPayload),
+        ];
+
+        if ($isBig) {
+            $payload['is_big'] = true;
+        }
+
+        $response = Telegram::post('setMessageReaction', $payload);
+        $decoded = $response->getDecodedBody();
+
+        return (bool) ($decoded['result'] ?? false);
+    }
 }

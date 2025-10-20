@@ -2,6 +2,7 @@
 
 namespace App\Telegram\States;
 
+use App\Enums\Telegram\StateKey;
 use App\Enums\SupportTicketType;
 use App\Models\SupportTicket;
 use App\Services\Telegram\Admin\AdminMessenger;
@@ -21,6 +22,8 @@ class Support extends AbstractState
         if ($this->interceptShortcuts($text)) return;
 
         $user = $this->process();
+        $chatId = $user->telegram_chat_id;
+        $messageId = data_get($u, 'message.message_id');
 
         $ticket = SupportTicket::create([
             'user_id' => $user->id,
@@ -28,7 +31,13 @@ class Support extends AbstractState
             'type'    => SupportTicketType::Question,
         ]);
 
+        if ($chatId && $messageId) {
+            $this->tgReact($chatId, (int) $messageId, [['type' => 'emoji', 'emoji' => '🙏']], true);
+        }
+
         app(AdminMessenger::class)->broadcastSupportFromUser($ticket);
         $this->sendWithReplyKeyboard('telegram.support.sent', KeyboardFactory::replyBackOnly());
+
+        $this->resetToWelcomeMenu($resetAnchor = false);
     }
 }
