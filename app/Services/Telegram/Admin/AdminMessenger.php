@@ -14,10 +14,13 @@ class AdminMessenger
 
     public function broadcastTopupRequest(TopupRequest $req): void
     {
-        $cap = __('telegram.topup.request_title')."\n"
-            . "UserID: <code>{$req->user_id}</code> • "
-            . __('telegram.topup.line_amount', ['amount' => number_format($req->amount)])."\n"
-            . "Method: <code>{$req->method}</code> • " . __('telegram.topup.line_id', ['id' => $req->id]);
+        $cap = implode("\n", [
+            __('telegram.topup.request_title'),
+            __('telegram.topup.line_user_html', ['user' => $req->user_id]) . ' • ' .
+                __('telegram.topup.line_amount_html', ['amount' => number_format($req->amount)]),
+            __('telegram.topup.line_method_html', ['method' => $req->method]) . ' • ' .
+                __('telegram.topup.line_id_html', ['id' => $req->id]),
+        ]);
 
         $kb = [
             'inline_keyboard' => [[
@@ -52,7 +55,12 @@ class AdminMessenger
         }
 
         $cap = __('telegram.admin.support_from_user_title')."\n"
-            . "Ticket: <code>{$ticket->id}</code> • User: <code>{$from->id}</code> • TG: <code>{$from->telegram_user_id}</code>\n\n"
+            . __('telegram.admin.support_from_user_meta', [
+                'ticket'   => "<code>{$ticket->id}</code>",
+                'user'     => "<code>{$from->id}</code>",
+                'telegram' => "<code>{$from->telegram_user_id}</code>",
+            ])
+            . "\n\n"
             . $ticket->message;
 
         $kb = [

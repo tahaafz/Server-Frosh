@@ -7,12 +7,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Category extends Model
 {
-    protected $fillable = ['slug', 'title_key', 'next_slug', 'is_final'];
+    protected $fillable = ['slug', 'title_key'];
 
     public function states(): HasMany
     {
         return $this->hasMany(CategoryState::class)
             ->where('active', true)
-            ->orderBy('sort');
+            ->orderBy('id');
     }
 }

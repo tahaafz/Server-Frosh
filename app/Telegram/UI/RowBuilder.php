@@ -2,13 +2,13 @@
 
 namespace App\Telegram\UI;
 
-use App\Models\TgState;
+use App\Models\CategoryState;
 use App\Telegram\Callback\Action;
 
 class RowBuilder
 {
     /**
-     * @param iterable<TgState> $buttons
+     * @param iterable<CategoryState> $buttons
      * @return Row[]
      */
     public static function build(iterable $buttons): array
@@ -23,7 +23,9 @@ class RowBuilder
                 ['id' => $btn->id]
             ); // متن دکمه از lang
 
-            if ($btn->layout === 'below' || empty($current)) {
+            $placement = $btn->sort ?? null;
+
+            if ($placement === 'below' || empty($current)) {
                 if (!empty($current)) {
                     $rows[] = Row::make(...$current);
                     $current = [];

@@ -12,11 +12,13 @@ class TopupDispatcher
 
     public function sendToAdmins(TopupRequest $req): void
     {
-        $cap = __('telegram.topup.request_title')."\n"
-            . "UserID: <code>{$req->user_id}</code>\n"
-            . __('telegram.topup.line_amount', ['amount' => number_format($req->amount)])."\n"
-            . __('telegram.topup.line_method', ['method' => $req->method])."\n"
-            . __('telegram.topup.line_id', ['id' => $req->id]);
+        $cap = implode("\n", [
+            __('telegram.topup.request_title'),
+            __('telegram.topup.line_user', ['user' => $req->user_id]),
+            __('telegram.topup.line_amount', ['amount' => number_format($req->amount)]),
+            __('telegram.topup.line_method', ['method' => $req->method]),
+            __('telegram.topup.line_id', ['id' => $req->id]),
+        ]);
 
         $kb = [
             'inline_keyboard' => [[
