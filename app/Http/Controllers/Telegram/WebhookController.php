@@ -3,16 +3,19 @@
 namespace App\Http\Controllers\Telegram;
 
 use App\DTOs\Telegram\TelegramUpdateDTO;
-use App\Pipelines\Telegram\Pipes\BootTelegramUser;
-use App\Pipelines\Telegram\Pipes\CheckSpam;
-use App\Pipelines\Telegram\Pipes\EnforceChannelGate;
-use App\Pipelines\Telegram\Pipes\EnforcePrivateChat;
-use App\Pipelines\Telegram\Pipes\EnsureIdentifiers;
-use App\Pipelines\Telegram\Pipes\EnsureUserNotBlocked;
-use App\Pipelines\Telegram\Pipes\HandleAdminInbox;
-use App\Pipelines\Telegram\Pipes\HandleStartCommand;
-use App\Pipelines\Telegram\Pipes\HandleState;
-use App\Pipelines\Telegram\Pipes\PreventDuplicate;
+use App\Pipelines\Telegram\Pipes\{
+    AcquireChatLock,
+    BootTelegramUser,
+    CheckSpam,
+    EnforceChannelGate,
+    EnforcePrivateChat,
+    EnsureIdentifiers,
+    EnsureUserNotBlocked,
+    HandleAdminInbox,
+    HandleStartCommand,
+    HandleState,
+    PreventDuplicate
+};
 use App\Pipelines\Telegram\WebhookPayload;
 use Illuminate\Http\Request;
 use Illuminate\Pipeline\Pipeline;
@@ -27,8 +30,9 @@ class WebhookController extends Controller
         return $pipeline
             ->send($payload)
             ->through([
-                EnsureIdentifiers::class,
                 PreventDuplicate::class,
+                AcquireChatLock::class,
+                EnsureIdentifiers::class,
                 EnforcePrivateChat::class,
                 BootTelegramUser::class,
                 EnsureUserNotBlocked::class,

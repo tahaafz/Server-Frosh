@@ -17,11 +17,13 @@ class RowBuilder
         $current = [];
 
         foreach ($buttons as $btn) {
-            $tgBtn = Btn::key(
-                $btn->title_key,
+            $label = (string) $btn->title;
+
+            $tgBtn = Btn::make(
+                $label,
                 Action::CatalogPick,
                 ['id' => $btn->id]
-            ); // متن دکمه از lang
+            ); // متن دکمه از داده ذخیره‌شده در DB
 
             $placement = $btn->sort ?? null;
 

@@ -58,20 +58,7 @@ abstract class CategoryDrivenState extends DeclarativeState
             UserCart::reset($user);
         }
 
-        $slug     = $this->stateKey->categorySlug(); // از enum
-        $category = Category::query()->where('slug', $slug)->firstOrFail();
-        $buttons  = $category->states()->get();
-
-        $rows = RowBuilder::build($buttons);
-        $menu = InlineMenu::make(...$rows);
-
-        if ($prev = $this->stateKey->back()) {
-            $menu->backTo($prev->value, 'telegram.buttons.back');
-        }
-
-        $vars = (array) $this->enterEffects($user);
-
-        $this->sayKey($this->textKey, menu: $menu, vars: $vars);
+        $this->renderState($user);
     }
 
     public function onCallback(string $callbackData, array $u): void
@@ -93,6 +80,14 @@ abstract class CategoryDrivenState extends DeclarativeState
             $btn = CategoryState::query()->with('category')->find($id);
             if (!$btn) {
                 $this->silent();
+                return;
+            }
+
+            $expectedSlug = $this->stateKey->categorySlug();
+            $actualSlug   = $btn->category?->slug;
+
+            if ($expectedSlug && $actualSlug !== $expectedSlug) {
+                $this->renderState($this->process());
                 return;
             }
 
@@ -129,11 +124,20 @@ abstract class CategoryDrivenState extends DeclarativeState
         if (str_starts_with($payload, $prefix)) {
             $id  = (int) substr($payload, strlen($prefix));
             $btn = CategoryState::query()->with('category')->find($id);
-            if ($btn) {
-                $this->selectCategoryState($btn);
-            } else {
+            if (!$btn) {
                 $this->silent();
+                return;
             }
+
+            $expectedSlug = $this->stateKey->categorySlug();
+            $actualSlug   = $btn->category?->slug;
+
+            if ($expectedSlug && $actualSlug !== $expectedSlug) {
+                $this->renderState($this->process());
+                return;
+            }
+
+            $this->selectCategoryState($btn);
             return;
         }
 
@@ -156,7 +160,7 @@ abstract class CategoryDrivenState extends DeclarativeState
             }
         }
 
-        unset($data['choices'][$prevSlug], $data['choices_ids'][$prevSlug]);
+        unset($data['choices'][$prevSlug], $data['choices_ids'][$prevSlug], $data['choices_codes'][$prevSlug]);
         $user->forceFill(['tg_data' => $data])->save();
 
         $this->goKey($prev->value);
@@ -169,13 +173,28 @@ abstract class CategoryDrivenState extends DeclarativeState
         DB::transaction(function () use ($btn) {
             $user = $this->process();
 
-            if ($btn->price > 0) {
+            $data = (array) ($user->tg_data ?? []);
+            $slug = $btn->category->slug;
+            $previousId = (int) ($data['choices_ids'][$slug] ?? 0);
+
+            if ($previousId > 0 && $previousId !== $btn->id) {
+                if ($previous = CategoryState::query()->find($previousId)) {
+                    if ($previous->price > 0) {
+                        UserCart::sub($user, (int) $previous->price);
+                    }
+                }
+            }
+
+            if ($previousId !== $btn->id && $btn->price > 0) {
                 UserCart::add($user, (int) $btn->price);
             }
 
-            $data = (array) ($user->tg_data ?? []);
-            $slug = $btn->category->slug;
-            $data['choices'][$slug]     = $btn->code ?? $btn->title_key;
+            $data['choices'][$slug]     = (string) $btn->title;
+            if (!empty($btn->code)) {
+                $data['choices_codes'][$slug] = $btn->code;
+            } else {
+                unset($data['choices_codes'][$slug]);
+            }
             $data['choices_ids'][$slug] = $btn->id;
             $user->forceFill(['tg_data' => $data])->save();
         });
@@ -185,5 +204,23 @@ abstract class CategoryDrivenState extends DeclarativeState
         } else {
             $this->goKey(StateKey::BuyConfirm->value);
         }
+    }
+
+    protected function renderState(User $user): void
+    {
+        $slug     = $this->stateKey->categorySlug();
+        $category = Category::query()->where('slug', $slug)->firstOrFail();
+        $buttons  = $category->states()->get();
+
+        $rows = RowBuilder::build($buttons);
+        $menu = InlineMenu::make(...$rows);
+
+        if ($prev = $this->stateKey->back()) {
+            $menu->backTo($prev->value, 'telegram.buttons.back');
+        }
+
+        $vars = (array) $this->enterEffects($user);
+
+        $this->sayKey($this->textKey, menu: $menu, vars: $vars);
     }
 }

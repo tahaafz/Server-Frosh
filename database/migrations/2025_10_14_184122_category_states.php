@@ -10,7 +10,7 @@ return new class extends Migration {
         Schema::create('category_states', function (Blueprint $t) {
             $t->id();
             $t->foreignId('category_id')->constrained('categories')->cascadeOnDelete();
-            $t->string('title_key');
+            $t->string('title');
             $t->string('code')->nullable();
             $t->unsignedBigInteger('price')->default(0);
             $t->unsignedInteger('sort')->default(0);

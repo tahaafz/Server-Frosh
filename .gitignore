@@ -42,9 +42,4 @@ auth.json
 laradumps.yaml
 /AGENTS.md
 /boost.json
-/.junie/guidelines.md
-/.cursor/rules/laravel-boost.mdc
-/.cursor/mcp.json
-/.junie/mcp/mcp.json
-/.vscode/mcp.json
 /project.zip

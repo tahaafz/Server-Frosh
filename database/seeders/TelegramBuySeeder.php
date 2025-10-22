@@ -32,26 +32,26 @@ class TelegramBuySeeder extends Seeder
 
             $buttons = [
                 'buy.provider' => [
-                    ['title_key' => 'telegram.providers.alpha', 'code' => 'provider-alpha', 'price' => 0, 'sort' => 'beside'],
-                    ['title_key' => 'telegram.providers.beta',  'code' => 'provider-beta',  'price' => 0, 'sort' => 'beside'],
-                    ['title_key' => 'telegram.providers.gamma', 'code' => 'provider-gamma', 'price' => 0, 'sort' => 'below'],
+                    ['title' => 'Alpha', 'code' => 'provider-alpha', 'price' => 0, 'sort' => 'beside'],
+                    ['title' => 'Beta',  'code' => 'provider-beta',  'price' => 0, 'sort' => 'beside'],
+                    ['title' => 'Gamma', 'code' => 'provider-gamma', 'price' => 0, 'sort' => 'below'],
                 ],
                 'buy.plan' => [
-                    ['title_key' => 'telegram.plans.basic', 'code' => 'plan-basic', 'price' => 100000, 'sort' => 'beside'],
-                    ['title_key' => 'telegram.plans.pro',   'code' => 'plan-pro',   'price' => 200000, 'sort' => 'beside'],
-                    ['title_key' => 'telegram.plans.ultra', 'code' => 'plan-ultra', 'price' => 350000, 'sort' => 'below'],
+                    ['title' => 'پلن پایه',   'code' => 'plan-basic', 'price' => 100000, 'sort' => 'beside'],
+                    ['title' => 'پلن حرفه‌ای', 'code' => 'plan-pro',   'price' => 200000, 'sort' => 'beside'],
+                    ['title' => 'پلن ویژه',    'code' => 'plan-ultra', 'price' => 350000, 'sort' => 'below'],
                 ],
                 'buy.location' => [
-                    ['title_key' => 'telegram.locations.de', 'code' => 'loc-de', 'price' => 0, 'sort' => 'beside'],
-                    ['title_key' => 'telegram.locations.fr', 'code' => 'loc-fr', 'price' => 0, 'sort' => 'beside'],
-                    ['title_key' => 'telegram.locations.us', 'code' => 'loc-us', 'price' => 0, 'sort' => 'below'],
+                    ['title' => '🇩🇪 آلمان', 'code' => 'loc-de', 'price' => 0, 'sort' => 'beside'],
+                    ['title' => '🇫🇷 فرانسه', 'code' => 'loc-fr', 'price' => 0, 'sort' => 'beside'],
+                    ['title' => '🇺🇸 آمریکا', 'code' => 'loc-us', 'price' => 0, 'sort' => 'below'],
                 ],
                 'buy.os' => [
-                    ['title_key' => 'telegram.os.android', 'code' => 'os-android', 'price' => 0, 'sort' => 'beside'],
-                    ['title_key' => 'telegram.os.ios',     'code' => 'os-ios',     'price' => 0, 'sort' => 'beside'],
+                    ['title' => 'Android', 'code' => 'os-android', 'price' => 0, 'sort' => 'beside'],
+                    ['title' => 'iOS',     'code' => 'os-ios',     'price' => 0, 'sort' => 'beside'],
                 ],
                 'buy.review' => [
-                    ['title_key' => 'telegram.buttons.review_confirm', 'code' => 'review-confirm', 'price' => 0, 'sort' => 'beside'],
+                    ['title' => 'تایید سفارش', 'code' => 'review-confirm', 'price' => 0, 'sort' => 'beside'],
                 ],
             ];
 
@@ -64,14 +64,12 @@ class TelegramBuySeeder extends Seeder
                     $match = ['category_id' => $categoryId];
                     if (!empty($b['code'])) {
                         $match['code'] = $b['code'];
-                    } else {
-                        $match['title_key'] = $b['title_key'];
                     }
 
                     CategoryState::updateOrCreate(
                         $match,
                         [
-                            'title_key' => $b['title_key'],
+                            'title'     => $b['title'],
                             'price'     => (int) ($b['price'] ?? 0),
                             'sort'      => $b['sort'] ?? ($i === 0 ? 'beside' : 'below'),
                             'active'    => true,

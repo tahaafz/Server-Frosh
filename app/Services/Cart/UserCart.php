@@ -13,11 +13,14 @@ class UserCart
 
     public static function sub(User $user, int $amount): void
     {
-        $user->decrement('cart_total', max(0, $amount));
-        $user->refresh();
-        if ($user->cart_total < 0) {
-            $user->forceFill(['cart_total' => 0])->save();
+        $amount = max(0, $amount);
+        $current = (int) $user->cart_total;
+        $newTotal = max(0, $current - $amount);
+        if ($newTotal === $current) {
+            return;
         }
+
+        $user->forceFill(['cart_total' => $newTotal])->save();
     }
 
     public static function reset(User $user): void

@@ -26,14 +26,13 @@ class Confirm extends AbstractState
 
         $menu = InlineMenu::make(
             Row::make(Btn::key('telegram.buttons.increase_balance', Action::CheckoutTopup))
-        )->backTo(StateKey::BuyReview->value, 'telegram.buttons.back');
+        );
 
-        $this->sendT(
+        $this->editT(
             'telegram.buy.checkout.insufficient',
             [
                 'cart'    => number_format($sum['cart']),
                 'balance' => number_format($sum['balance']),
-                'deficit' => number_format($sum['deficit']),
             ],
             $menu->toTelegram(fn(string $raw) => $this->pack($raw))
         );
@@ -48,6 +47,7 @@ class Confirm extends AbstractState
 
         $action = $parsed['action'];
         if ($action === Action::CheckoutTopup) {
+            $this->rememberDeficit();
             $this->goKey(StateKey::WalletWaitReceipt->value);
             return;
         }
@@ -76,6 +76,7 @@ class Confirm extends AbstractState
         $payload = trim($text);
 
         if ($payload === Action::CheckoutTopup->value) {
+            $this->rememberDeficit();
             $this->goKey(StateKey::WalletWaitReceipt->value);
             return;
         }
@@ -83,5 +84,20 @@ class Confirm extends AbstractState
         if ($payload === Action::Back->value) {
             $this->goKey(StateKey::BuyReview->value);
         }
+    }
+
+    private function rememberDeficit(): void
+    {
+        $user = $this->process();
+        $sum  = (new Calculator())->summarize($user);
+        $deficit = (int) $sum['deficit'];
+
+        if ($deficit <= 0) {
+            return;
+        }
+
+        $data = (array) ($user->tg_data ?? []);
+        $data['topup_amount'] = $deficit;
+        $user->forceFill(['tg_data' => $data])->save();
     }
 }
